@@ -28,8 +28,9 @@ const SEED_ARTICLES = [
     sport: 'FOOTBALL' as const,
     location: 'Kinshasa',
     source: 'LINAFOOT',
-    imageUrl: '/articles/provincial-lubumbashi.png',
-    imageAlt: 'Football congolais',
+    imageUrl: '/articles/national-leopards.png',
+    imageAlt: 'LINAFOOT calendrier',
+    featured: true,
     breaking: false,
   },
   {
