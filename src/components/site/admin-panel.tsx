@@ -179,12 +179,15 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Upload échoué')
+      // L'API retourne mediaUrl (pas url) — support des 2 pour compatibilité
+      const mediaUrl = data.mediaUrl || data.url
+      if (!mediaUrl) throw new Error('URL du média manquante dans la réponse')
       if (type === 'image') {
-        setDraft((d) => ({ ...d, imageUrl: data.url }))
-        toast.success('Image importée.')
+        setDraft((d) => ({ ...d, imageUrl: mediaUrl }))
+        toast.success(`Image importée (${data.storage === 'cloudinary' ? 'Cloudinary' : 'local'}).`)
       } else {
-        setDraft((d) => ({ ...d, videoUrl: data.url }))
-        toast.success('Vidéo importée.')
+        setDraft((d) => ({ ...d, videoUrl: mediaUrl }))
+        toast.success(`Vidéo importée (${data.storage === 'cloudinary' ? 'Cloudinary' : 'local'}).`)
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Upload impossible.')
@@ -253,7 +256,10 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Génération échouée')
-      setDraft((d) => ({ ...d, imageUrl: data.url }))
+      // L'API generate-image retourne imageUrl (pas url)
+      const mediaUrl = data.imageUrl || data.mediaUrl || data.url
+      if (!mediaUrl) throw new Error('URL image manquante')
+      setDraft((d) => ({ ...d, imageUrl: mediaUrl }))
       toast.success('Image IA générée avec succès !')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Génération impossible.')
