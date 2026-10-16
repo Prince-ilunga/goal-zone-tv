@@ -53,7 +53,6 @@ async function getData() {
   try {
     if (!db) return empty
 
-    console.log('[page getData] querying featured articles...')
     const [featured, recent, breaking, football, articlesCount, breakingCount, stats] =
       await Promise.all([
         db.article.findFirst({
@@ -96,7 +95,8 @@ async function getData() {
     }
 
     return {
-      featured: featured ? toArticle(featured) : null,
+      // Si aucun article marqué featured, on prend le dernier publié
+      featured: toArticle(featured || recent[0] || null),
       recent: recent.map(toArticle),
       breaking: breaking.map(toArticle),
       football: football.map(toArticle),
