@@ -35,7 +35,7 @@ export function ArticleCard({ article, variant = 'default' }: ArticleCardProps) 
             <img
               src={article.imageUrl}
               alt={article.imageAlt || article.title}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-xl">
@@ -69,7 +69,7 @@ export function ArticleCard({ article, variant = 'default' }: ArticleCardProps) 
                 <img
                   src={article.imageUrl || '/articles/hero-football.png'}
                   alt={article.imageAlt || article.title}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain"
                 />
                 <PlayCircle className="absolute inset-0 m-auto size-8 text-white drop-shadow" />
               </>
@@ -77,7 +77,7 @@ export function ArticleCard({ article, variant = 'default' }: ArticleCardProps) 
               <img
                 src={article.imageUrl || '/articles/hero-football.png'}
                 alt={article.imageAlt || article.title}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
               />
             )}
           </div>
@@ -137,7 +137,7 @@ export function ArticleCard({ article, variant = 'default' }: ArticleCardProps) 
             <img
               src={article.imageUrl || '/articles/hero-football.png'}
               alt={article.imageAlt || article.title}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
             />
             <div className="absolute inset-0 bg-black/30 transition group-hover:bg-black/40" />
             <PlayCircle className="absolute inset-0 m-auto size-12 text-white drop-shadow-lg" />
@@ -146,7 +146,7 @@ export function ArticleCard({ article, variant = 'default' }: ArticleCardProps) 
           <img
             src={article.imageUrl || '/articles/hero-football.png'}
             alt={article.imageAlt || article.title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
           />
         )}
         <div className="absolute left-2 top-2 flex gap-1.5">

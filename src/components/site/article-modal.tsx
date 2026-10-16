@@ -170,7 +170,10 @@ export function ArticleModal() {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="max-h-[92vh] w-full max-w-4xl gap-0 overflow-hidden p-0 sm:max-w-4xl">
+      <DialogContent
+        showCloseButton={false}
+        className="max-h-[92vh] w-full max-w-4xl gap-0 overflow-hidden p-0 sm:max-w-4xl"
+      >
         <DialogHeader className="border-b bg-card px-5 py-4">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <Badge className={`${scope.color} border-0`}>{scope.label}</Badge>
@@ -229,7 +232,7 @@ export function ArticleModal() {
                   <img
                     src={current.imageUrl!}
                     alt={current.imageAlt || current.title}
-                    className="aspect-video w-full object-cover"
+                    className="aspect-video w-full object-contain"
                   />
                 )}
               </div>

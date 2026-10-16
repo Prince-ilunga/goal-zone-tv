@@ -328,6 +328,7 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        showCloseButton={false}
         className="max-h-[92vh] w-full max-w-3xl gap-0 overflow-hidden p-0 sm:max-w-3xl flex flex-col"
         onPointerDownOutside={blockClose}
         onInteractOutside={blockClose}

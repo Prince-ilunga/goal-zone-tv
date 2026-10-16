@@ -3,10 +3,21 @@ import { fr } from 'date-fns/locale'
 
 /**
  * Format a date as "il y a 2 heures" (French).
+ * Gère correctement les dates stockées en UTC (sans suffixe Z) :
+ * si la date n'a pas d'info de fuseau, on l'interprète comme UTC.
  */
 export function timeAgo(date: string | Date): string {
   try {
-    const d = typeof date === 'string' ? new Date(date) : date
+    let d: Date
+    if (typeof date === 'string') {
+      // Si la date n'a pas de Z ni de offset, c'est du UTC "naif" → on ajoute Z
+      const iso = date.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(date) ? date : date + 'Z'
+      d = new Date(iso)
+    } else {
+      d = date
+    }
+    // Vérifie que la date est valide
+    if (isNaN(d.getTime())) return ''
     return formatDistanceToNow(d, { addSuffix: true, locale: fr })
   } catch {
     return ''
