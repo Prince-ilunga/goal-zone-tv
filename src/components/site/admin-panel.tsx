@@ -23,7 +23,6 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
 import {
   Lock,
@@ -281,12 +280,12 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-h-[92vh] w-full max-w-3xl gap-0 overflow-hidden p-0 sm:max-w-3xl"
+        className="max-h-[92vh] w-full max-w-3xl gap-0 overflow-hidden p-0 sm:max-w-3xl flex flex-col"
         onPointerDownOutside={blockClose}
         onInteractOutside={blockClose}
         onEscapeKeyDown={blockClose}
       >
-        <DialogHeader className="border-b bg-king-blue text-primary-foreground px-5 py-4">
+        <DialogHeader className="border-b bg-king-blue text-primary-foreground px-5 py-4 shrink-0">
           <DialogTitle className="flex items-center gap-2 font-display text-xl">
             <Lock className="size-5" /> Espace rédaction — GOAL ZONE TV
           </DialogTitle>
@@ -329,8 +328,8 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
           </form>
         ) : (
           /* ----- TABS ----- */
-          <Tabs defaultValue="publish" className="w-full">
-            <div className="flex items-center justify-between border-b px-3">
+          <Tabs defaultValue="publish" className="flex w-full min-h-0 flex-1 flex-col">
+            <div className="flex shrink-0 items-center justify-between border-b px-3">
               <TabsList className="bg-transparent">
                 <TabsTrigger value="publish">
                   <Newspaper className="mr-1.5 size-4" /> Publier
@@ -345,9 +344,8 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
             </div>
 
             {/* ----- PUBLISH TAB ----- */}
-            <TabsContent value="publish" className="m-0">
-              <ScrollArea className="max-h-[68vh]">
-                <form onSubmit={onPublish} className="space-y-4 p-5">
+            <TabsContent value="publish" className="m-0 min-h-0 flex-1 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+              <form onSubmit={onPublish} className="space-y-4 p-5">
                   <div className="space-y-1.5">
                     <Label htmlFor="title">Titre *</Label>
                     <Input
@@ -584,7 +582,6 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
                     </label>
                   </div>
                 </form>
-              </ScrollArea>
 
               <DialogFooter className="border-t p-4">
                 <Button
@@ -614,9 +611,8 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
             </TabsContent>
 
             {/* ----- LIST TAB ----- */}
-            <TabsContent value="list" className="m-0">
-              <ScrollArea className="max-h-[75vh]">
-                <div className="space-y-2 p-4">
+            <TabsContent value="list" className="m-0 min-h-0 flex-1 overflow-y-auto overscroll-contain p-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+                <div className="space-y-2">
                   {listLoading ? (
                     <p className="py-8 text-center text-sm text-muted-foreground">
                       <Loader2 className="mx-auto mb-2 size-6 animate-spin" />
@@ -695,7 +691,6 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
                     ))
                   )}
                 </div>
-              </ScrollArea>
             </TabsContent>
           </Tabs>
         )}

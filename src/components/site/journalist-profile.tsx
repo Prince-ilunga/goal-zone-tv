@@ -26,17 +26,15 @@ export function JournalistProfile() {
       </header>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Photo avec dégradé bleu turquoise + nom blanc en bas */}
+        {/* Photo Moïse Kalala (telle quelle, sans altération de couleur) */}
         <Card className="overflow-hidden lg:row-span-2 border-0 shadow-xl">
-          <div className="relative aspect-[3/4] w-full overflow-hidden bg-gradient-to-br from-cyan-500 via-blue-600 to-blue-900">
-            {/* Photo */}
+          <div className="relative aspect-[3/4] w-full overflow-hidden bg-muted">
+            {/* Photo originale, non modifiée */}
             <img
               src="/moise-kalala.jpg"
-              alt="Moïse Kalala, journaliste sportif"
-              className="h-full w-full object-cover mix-blend-luminosity opacity-90"
+              alt="Moïse Kalala, journaliste sportif fondateur de GOAL ZONE TV"
+              className="h-full w-full object-cover"
             />
-            {/* Overlay dégradé bas → nom visible */}
-            <div className="absolute inset-0 bg-gradient-to-t from-blue-950/95 via-blue-900/30 to-transparent" />
 
             {/* Badge logo GOAL ZONE TV en haut à droite */}
             <div className="absolute top-3 right-3">
@@ -47,12 +45,12 @@ export function JournalistProfile() {
               />
             </div>
 
-            {/* Nom + fonction en bas */}
-            <div className="absolute bottom-0 left-0 right-0 p-5">
-              <h3 className="font-display text-2xl font-extrabold text-white uppercase tracking-tight drop-shadow-lg">
+            {/* Bandeau bleu roi avec nom + fonction en bas (par-dessus la photo sans l'altérer) */}
+            <div className="absolute bottom-0 left-0 right-0 bg-king-blue/95 backdrop-blur-sm p-4">
+              <h3 className="font-display text-xl font-extrabold text-white uppercase tracking-tight">
                 Moïse Kalala
               </h3>
-              <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-cyan-200 inline-flex items-center gap-1.5">
+              <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-widest text-primary-foreground/85 inline-flex items-center gap-1.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse-dot" />
                 Journaliste sportif · Fondateur
               </p>
