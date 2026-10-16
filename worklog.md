@@ -272,3 +272,25 @@ Stage Summary:
 - Upload aperçu : ✅ CORRIGÉ (l'image s'affiche maintenant après upload)
 - Fonctionne pour : upload image, upload vidéo, génération IA
 - Push sur GitHub, en attente rebuild Vercel
+
+---
+Task ID: FIX-4-ISSUES
+Agent: Z.ai Code (main)
+Task: 4 corrections (heure, images, double X, bande défilante)
+
+Work Log:
+1. HEURE : correction timeAgo → ajout automatique du suffixe Z si date naive (PostgreSQL stocke sans fuseau)
+   - test : 2min ago → "il y a 2 min" ✅
+2. IMAGES : object-cover → object-contain dans article-card.tsx (5 occurrences) + article-modal.tsx (2)
+   - les images s'affichent complètement sans être coupées
+3. DOUBLE X : ajout showCloseButton={false} sur DialogContent (article-modal + admin-panel)
+   - désactive le bouton X natif de Radix, garde le bouton custom
+   - VLM confirme "un seul bouton X"
+4. BANDE DERNIÈRE MINUTE : LiveTicker rendu client-side (useEffect + fetch /api/articles?breaking=true)
+   - contourne le cache Vercel
+   - articles breaking récupérés dynamiquement
+
+Stage Summary:
+- Build : OK (14 routes)
+- Lint : 0 erreur
+- Push sur GitHub, en attente rebuild Vercel
