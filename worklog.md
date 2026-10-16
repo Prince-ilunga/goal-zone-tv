@@ -234,3 +234,23 @@ Stage Summary:
 - Articles featured : 3 (Premier League, CHAN, Athlétisme) avec breaking sur le 1er
 - Images : 0 cassée
 - Bandeau « Dernière minute » : affiche le 1er article (breaking=true)
+
+---
+Task ID: FIX-BUILD-ERROR-HERO
+Agent: Z.ai Code (main)
+Task: Corriger erreur build + hero vide
+
+Work Log:
+- Erreur build : fetchCache='no-store' valeur invalide pour Next.js → build échouait
+- Correction : suppression de fetchCache et revalidate (gardé seulement dynamic='force-dynamic')
+- Hero : ajout client-side fetch (useEffect) pour contourner cache Vercel
+- Hero : fallback featured || recent[0] (toujours afficher le dernier article publié)
+- Build local : OK (14 routes compilées)
+- Push + rebuild Vercel : HTTP 200 (erreur build disparue)
+- Test navigateur : hero rempli avec "Premier League" (dernier article publié) ✅
+
+Stage Summary:
+- Build error : RÉSOLUE ✅
+- Hero : affiche le dernier article publié (Premier League) ✅
+- Client-side fetch : contourne le cache Vercel ✅
+- 0 erreur console
