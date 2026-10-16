@@ -172,3 +172,24 @@ Stage Summary:
 - Test Agent Browser : import image → "Image importée" + aperçu ; bouton Télécharger présent ; clic → "Image téléchargée. 📥 Vérifiez votre dossier Téléchargements / galerie."
 - 0 erreur console, 0 erreur lint, build OK
 - Push sur GitHub, token nettoyé
+
+---
+Task ID: PRODUCTION-DEPLOY
+Agent: Z.ai Code (main)
+Task: Déploiement production Vercel + Neon + création tables + seed
+
+Work Log:
+- Diagnostic : Vercel bloquait le déploiement car email Git auteur = z@container (invalide)
+- Correction config git locale : user.name=Prince-ilunga, user.email=Prince-ilunga@users.noreply.github.com
+- Commit + push avec bonne identité → Vercel a rebuild
+- Création endpoint /api/setup-db : CREATE TABLE sans CONSTRAINT nommées (contourne erreur Prisma "multiple commands")
+- Tables créées sur Neon : Article, Subscriber, Like, Comment + 8 index
+- Seed : 9 articles insérés (Premier League, CHAN, Athlétisme, LINAFOOT, Mazembe, etc.)
+- Test Agent Browser sur production : articles visibles, 0 erreur console
+
+Stage Summary:
+- Site en ligne : https://goal-zone-tv.vercel.app/ ✅
+- DB Neon : 4 tables créées + 9 articles seedés ✅
+- Articles visibles publiquement (Premier League, CHAN, Athlétisme, Mazembe, LINAFOOT) ✅
+- Menu bleu roi premium actif ✅
+- Cloudinary : pas encore testé (build déployé ancien, /api/upload 404) → à retester après rebuild
