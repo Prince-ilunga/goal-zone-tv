@@ -101,3 +101,29 @@ Stage Summary:
 - Site 100% restauré et fonctionnel en local
 - Code poussé sur GitHub → Vercel va auto-rebuild
 - En attente : URL Vercel de l'utilisateur pour seed la DB production + tests finaux
+
+---
+Task ID: RESTORE-ORIGINALS
+Agent: Z.ai Code (main)
+Task: Restaurer logo/photo originaux + corriger police et détails design
+
+Work Log:
+- Restauration des fichiers originaux (hash identiques vérifiés) :
+  * public/logo.jpg ← upload/IMG-20261014-WA0060.jpg (56 Ko, logo GOAL ZONE TV original)
+  * public/moise-kalala.jpg ← upload/IMG-20261015-WA0014.jpg (75 Ko, portrait original)
+- Changement police display : Oswald → Montserrat (plus grasse, géométrique, moderne)
+  * weights: 400, 600, 700, 800, 900 (expendables pour titres impactants)
+  * variable CSS --font-display mise à jour
+- Correction carte bio Moïse (selon captures 20261015_204548.jpg) :
+  * Fond dégradé bleu turquoise (cyan-500 → blue-600 → blue-900)
+  * Photo avec mix-blend-luminosity + opacity
+  * Overlay dégradé bas (from-blue-950/95) pour lisibilité nom
+  * Nom "Moïse Kalala" en blanc extrabold en bas + fonction "Journaliste sportif · Fondateur"
+  * Badge logo GOAL ZONE TV en haut à droite
+- Titre header "GOAL ZONE TV" : bleu marine foncé (text-king-navy, oklch 0.25) + extrabold + uppercase + tracking-tight
+- Tagline : "L'info sportive · Moïse Kalala" avec tracking élargi
+
+Stage Summary:
+- Tests Agent Browser : Montserrat active ✅, titre bleu marine (L=9.3) ✅, carte bio validée par VLM ("photo homme + fond dégradé bleu/turquoise + nom blanc en bas + badge logo")
+- Lint : 0 erreur ; Build : OK (14 routes)
+- Push sur GitHub : commit ef9bcb1, token nettoyé du remote
