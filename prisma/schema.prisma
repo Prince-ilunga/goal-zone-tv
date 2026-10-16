@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma schema — GOAL ZONE TV
+// Provider is auto-switched by scripts/setup-db.js according to DATABASE_URL.
 
 generator client {
   provider = "prisma-client-js"
@@ -13,20 +10,73 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
+model Article {
+  id           String   @id @default(cuid())
+  title        String
+  slug         String   @unique
+  excerpt      String
+  content      String
+  scope        String   @default("NATIONAL") // PROVINCIAL | NATIONAL | INTERNATIONAL
+  sport        String   @default("FOOTBALL") // FOOTBALL | BASKETBALL | BOXE | ATHLETISME | AUTRE
+  imageUrl     String?
+  imageAlt     String?
+  videoUrl     String?
+  featured     Boolean  @default(false)
+  breaking     Boolean  @default(false)
+  views        Int      @default(0)
+  readMinutes  Int      @default(2)
+  source       String?
+  location     String?
+  published    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  likes    Like[]
+  comments Comment[]
+
+  @@index([scope])
+  @@index([sport])
+  @@index([featured])
+  @@index([breaking])
+  @@index([createdAt])
+}
+
+model Subscriber {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
-model Post {
+model Like {
+  id          String   @id @default(cuid())
+  articleId   String
+  fingerprint String
+  createdAt   DateTime @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, fingerprint])
+  @@index([articleId])
+}
+
+model Comment {
   id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
+  articleId String
+  name      String
+  content   String
+  approved  Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+}
+
+model SiteStats {
+  id             String   @id @default(cuid())
+  followers      Int      @default(0)
+  articlesCount  Int      @default(0)
+  createdAt      DateTime @default(now())
 }

@@ -52,3 +52,13 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# Prisma SQLite databases
+/db/*.db
+/db/*.db-journal
+/db/*.sqlite
+/db/*.sqlite-journal
+
+# Generated uploads (optional, can be committed)
+/public/articles/
+/public/videos/
