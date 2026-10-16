@@ -274,27 +274,27 @@ export function SiteHeader() {
         </Sheet>
       </div>
 
-      {/* Nav horizontale bleu roi */}
-      <nav className="bg-king-blue text-primary-foreground">
-        <div className="mx-auto flex max-w-7xl items-center gap-1 px-4">
+      {/* Nav horizontale bleu roi — cachée sur mobile (menu hamburger suffit) */}
+      <nav className="hidden md:block bg-king-blue text-primary-foreground">
+        <div className="mx-auto flex max-w-7xl items-center gap-1 px-4 overflow-x-auto scrollbar-thin">
           {NAV_ITEMS.map((item) => (
             <button
               key={item.scope}
               onClick={() => onNav(item.scope)}
-              className="border-b-2 border-transparent px-3 py-2.5 text-sm font-semibold uppercase tracking-wide transition hover:bg-white/10 hover:border-white"
+              className="border-b-2 border-transparent px-3 py-2.5 text-sm font-semibold uppercase tracking-wide transition hover:bg-white/10 hover:border-white whitespace-nowrap"
             >
               {item.label}
             </button>
           ))}
           <Link
             href="#apropos"
-            className="ml-auto hidden border-b-2 border-transparent px-3 py-2.5 text-sm font-semibold uppercase tracking-wide transition hover:bg-white/10 hover:border-white sm:inline-block"
+            className="ml-auto hidden border-b-2 border-transparent px-3 py-2.5 text-sm font-semibold uppercase tracking-wide transition hover:bg-white/10 hover:border-white lg:inline-block whitespace-nowrap"
           >
             À propos
           </Link>
           <button
             onClick={openAdmin}
-            className="flex items-center gap-1.5 border-b-2 border-transparent px-3 py-2.5 text-sm font-semibold uppercase tracking-wide transition hover:bg-white/10 hover:border-white"
+            className="flex items-center gap-1.5 border-b-2 border-transparent px-3 py-2.5 text-sm font-semibold uppercase tracking-wide transition hover:bg-white/10 hover:border-white whitespace-nowrap"
           >
             <Lock className="size-3.5" /> Rédaction
           </button>
