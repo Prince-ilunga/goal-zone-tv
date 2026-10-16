@@ -53,6 +53,7 @@ async function getData() {
   try {
     if (!db) return empty
 
+    console.log('[page getData] querying featured articles...')
     const [featured, recent, breaking, football, articlesCount, breakingCount, stats] =
       await Promise.all([
         db.article.findFirst({
