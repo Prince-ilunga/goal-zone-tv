@@ -152,3 +152,23 @@ Stage Summary:
 - Scroll rédaction : natif, fluide sur mobile, marche dans les 2 sens
 - Lint : 0 erreur ; Build : OK
 - Push : commit sur GitHub, token nettoyé
+
+---
+Task ID: FIX-MEDIA-DOWNLOAD
+Agent: Z.ai Code (main)
+Task: Ajouter boutons Télécharger image + vidéo dans la rédaction
+
+Work Log:
+- Diagnostic : le sous-agent n'avait pas ajouté les boutons "Télécharger" sur les aperçus image/vidéo
+- Ajout fonction downloadMedia(url, alt, isVideo) :
+  * Méthode 1 : fetch + blob + <a download> (Chrome desktop + mobile récent)
+  * Méthode 2 fallback : window.open URL + toast instructions "appui long > Enregistrer"
+  * Nom fichier intelligent : base sur alt + timestamp + extension (.png/.mp4)
+- Ajout bouton "Télécharger" sur aperçu image (bleu roi, bas-droite)
+- Ajout bouton "Télécharger vidéo" sur aperçu vidéo (bleu roi, bas-droite, z-10)
+- Import déjà fonctionnel : bouton "Importer image" + "Importer vidéo" (input file ref)
+
+Stage Summary:
+- Test Agent Browser : import image → "Image importée" + aperçu ; bouton Télécharger présent ; clic → "Image téléchargée. 📥 Vérifiez votre dossier Téléchargements / galerie."
+- 0 erreur console, 0 erreur lint, build OK
+- Push sur GitHub, token nettoyé
