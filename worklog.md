@@ -193,3 +193,26 @@ Stage Summary:
 - Articles visibles publiquement (Premier League, CHAN, Athlétisme, Mazembe, LINAFOOT) ✅
 - Menu bleu roi premium actif ✅
 - Cloudinary : pas encore testé (build déployé ancien, /api/upload 404) → à retester après rebuild
+
+---
+Task ID: PRODUCTION-FIX-IMAGES-UPLOAD
+Agent: Z.ai Code (main)
+Task: Corriger images 404 + upload cassé en production
+
+Work Log:
+- Diagnostic 1 : /api/upload retournait 404 → le endpoint avait été supprimé lors d'une restauration
+- Correction : recréation complète de src/app/api/upload/route.ts avec intégration Cloudinary + fallback local
+- Test : upload marche en production → "storage":"cloudinary" ✅, image uploadée sur res.cloudinary.com/duu6yuxu/
+- Diagnostic 2 : images d'articles 404 en production → .gitignore avait /public/articles/ et /public/videos/ (images jamais commitées !)
+- Correction : commenter les règles .gitignore pour /public/articles et /public/videos
+- Régénération 6 images sportives (hero-football, provincial-lubumbashi, national-leopards, international-cls, basketball, boxe)
+- Force add + commit + push → images maintenant sur GitHub (HTTP 200)
+- Après rebuild Vercel : images accessibles en production (HTTP 200)
+- Test navigateur : 14 images sur la page, 0 cassée, 9 articles visibles (Premier League, CHAN, Athlétisme, Mazembe, LINAFOOT)
+
+Stage Summary:
+- /api/upload : ✅ RESTAURÉ avec Cloudinary opérationnel
+- Images d'articles : ✅ visibles en production (0 cassée)
+- Articles : ✅ 9 seedés et affichés publiquement
+- Menu mobile : ✅ sans débordement
+- Upload Cloudinary : ✅ testé et fonctionnel (res.cloudinary.com/duu6yuxu/...)
