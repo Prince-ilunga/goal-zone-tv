@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,8 +14,27 @@ interface HeroProps {
   recent: Article[]
 }
 
-export function Hero({ featured, recent }: HeroProps) {
+export function Hero({ featured: initialFeatured, recent: initialRecent }: HeroProps) {
   const openArticle = useArticleModal((s) => s.openArticle)
+  // On récupère toujours les derniers articles côté client pour contourner
+  // le cache Vercel qui peut servir un HTML obsolète.
+  const [featured, setFeatured] = useState<Article | null>(initialFeatured)
+  const [recent, setRecent] = useState<Article[]>(initialRecent)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/articles?limit=6', { cache: 'no-store' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (cancelled || !data?.articles?.length) return
+        const arts = data.articles as Article[]
+        const featuredOne = arts.find((a) => a.featured) || arts[0]
+        setFeatured(featuredOne)
+        setRecent(arts.filter((a) => a.id !== featuredOne.id).slice(0, 5))
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
 
   if (!featured) {
     return (
