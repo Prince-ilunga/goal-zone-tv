@@ -127,3 +127,28 @@ Stage Summary:
 - Tests Agent Browser : Montserrat active ✅, titre bleu marine (L=9.3) ✅, carte bio validée par VLM ("photo homme + fond dégradé bleu/turquoise + nom blanc en bas + badge logo")
 - Lint : 0 erreur ; Build : OK (14 routes)
 - Push sur GitHub : commit ef9bcb1, token nettoyé du remote
+
+---
+Task ID: FIX-PHOTO-SCROLL
+Agent: Z.ai Code (main)
+Task: Photo Moise sans alteration + fix scroll mobile redaction
+
+Work Log:
+- Photo Moïse : retiré mix-blend-luminosity, opacity-90, gradient cyan/bleu (altérations de couleur)
+  * Maintenant : simple object-cover, photo affichée telle quelle
+  * Bandeau bleu roi (bg-king-blue/95 backdrop-blur) en bas avec nom + fonction
+  * Badge logo GOAL ZONE TV en haut à droite conservé
+- Scroll rédaction mobile : remplacé ScrollArea Radix (simulation scroll, cassé au touch) par scroll natif
+  * TabsContent : overflow-y-auto + overscroll-contain + WebkitOverflowScrolling: touch
+  * Tabs en flex flex-col flex-1 min-h-0
+  * TabsList shrink-0
+  * DialogContent flex flex-col
+  * Vérif : scrollHeight 1089 > clientHeight 612, scroll natif 0→477→0 OK
+  * Bouton Publier atteignable en bas (top=713 < viewport=844)
+  * Champ titre atteignable en haut (top=237 après scroll top)
+
+Stage Summary:
+- Photo Moïse : affichée telle quelle, sans filtre couleur (validé dans le code)
+- Scroll rédaction : natif, fluide sur mobile, marche dans les 2 sens
+- Lint : 0 erreur ; Build : OK
+- Push : commit sur GitHub, token nettoyé
