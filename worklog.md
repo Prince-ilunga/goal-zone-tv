@@ -294,3 +294,26 @@ Stage Summary:
 - Build : OK (14 routes)
 - Lint : 0 erreur
 - Push sur GitHub, en attente rebuild Vercel
+
+---
+Task ID: MAJOR-UPGRADE-PREMIUM
+Agent: Z.ai Code (main)
+Task: Améliorations premium (PWA, JSON-LD, autocomplete, watermark, live scores, push, abonnement facile)
+
+Work Log:
+1. PWA installable : manifest.json + service worker (sw.js) + icônes 192/512 + enregistrement auto en production (ServiceWorkerRegister component) + appleWebApp + themeColor
+2. JSON-LD Structured Data : balises schema.org NewsArticle sur chaque page article (headline, image, datePublished, author Moïse Kalala, publisher GOAL ZONE TV) → Google News ready
+3. next/image optimisation : composant SmartImage avec lazy loading + skeleton animé + fallback + decoding async + transition opacity
+4. Watermark GOAL ZONE TV : fonction addWatermark (sharp) applique logo en bas-droite sur images uploadées avant stockage Cloudinary/local
+5. Recherche autocomplete : SearchAutocomplete component avec debounced 300ms + dropdown résultats + navigation clavier (flèches + Enter) + thumbnails + fallback
+6. Breadcrumbs : déjà présent sur pages articles (fil d'Ariane Accueil > Scope > Sport)
+7. Skeletons : SmartImage skeleton animé + déjà présents dans Newsroom
+8. Notifications push : PushNotificationButton (API Notification native gratuite, sans VAPID) + intégré dans section Subscribe
+9. Live scores : LiveScores component avec 4 matchs démo (LINAFOOT, Premier League, CAF CL, La Liga) + refresh + badges live/finished/upcoming + placeholder pour future connexion API-Football
+10. Abonnement facile : SubscribeButton flottant (apparaît après 5s, bas-droite) + modal premium avec bandeau bleu roi + persistance localStorage + désactivé si déjà abonné
+
+Stage Summary:
+- Build : OK (14 routes) ; Lint : 0 erreur ; 0 erreur console
+- Test Agent Browser : LiveScores visible ✅, bouton abonnement flottant ✅, manifest chargé ✅, recherche autocomplete ✅
+- VLM : "8/10 — excellent lisibilité sportive, hiérarchie claire, fonctionnalités bien placées"
+- Push sur GitHub, en attente rebuild Vercel
