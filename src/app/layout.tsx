@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { ServiceWorkerRegister } from "@/components/site/sw-register";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -87,9 +88,23 @@ export const metadata: Metadata = {
     images: ["/logo.jpg"],
   },
   icons: {
-    icon: "/logo.jpg",
-    apple: "/logo.jpg",
+    icon: [
+      { url: "/logo.jpg", sizes: "any" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icon-192.png", sizes: "192x192" }],
     shortcut: "/logo.jpg",
+  },
+  manifest: "/manifest.json",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#003399" },
+    { media: "(prefers-color-scheme: dark)", color: "#003399" },
+  ],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "GOAL ZONE TV",
   },
   category: "sports",
 };
@@ -106,6 +121,7 @@ export default function RootLayout({
       >
         {children}
         <Toaster richColors position="top-center" />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

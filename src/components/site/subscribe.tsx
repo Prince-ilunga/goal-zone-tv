@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Mail, User, Send, CheckCircle2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { PushNotificationButton } from '@/components/site/push-notification-button'
 
 export function Subscribe() {
   const [name, setName] = useState('')
@@ -51,6 +52,13 @@ export function Subscribe() {
           Recevez chaque matin le meilleur de l&apos;actualité sportive de
           Lubumbashi, de la RDC et du monde. Gratuit, sans spam.
         </p>
+
+        {/* Bouton notifications push */}
+        <div className="mt-4 flex justify-center">
+          <div className="[&>button]:bg-white/10 [&>button]:text-white [&>button]:border-white/20 [&>button]:hover:bg-white/20">
+            <PushNotificationButton />
+          </div>
+        </div>
 
         {done ? (
           <div className="mx-auto mt-6 flex max-w-md items-center justify-center gap-3 rounded-lg bg-white/10 px-4 py-4">

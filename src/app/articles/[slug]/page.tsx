@@ -285,6 +285,42 @@ export default async function ArticlePage({
         )}
       </main>
       <SiteFooter />
+
+      {/* Structured Data JSON-LD pour Google News / rich snippets */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'NewsArticle',
+            headline: article.title,
+            description: article.excerpt,
+            image: article.imageUrl ? [article.imageUrl.startsWith('http') ? article.imageUrl : BASE_URL + article.imageUrl] : undefined,
+            datePublished: article.createdAt.toISOString(),
+            dateModified: article.updatedAt.toISOString(),
+            author: {
+              '@type': 'Person',
+              name: 'Moïse Kalala',
+              url: BASE_URL,
+            },
+            publisher: {
+              '@type': 'Organization',
+              name: 'GOAL ZONE TV',
+              logo: {
+                '@type': 'ImageObject',
+                url: BASE_URL + '/logo.jpg',
+              },
+            },
+            mainEntityOfPage: {
+              '@type': 'WebPage',
+              '@id': `${BASE_URL}/articles/${article.slug}`,
+            },
+            articleSection: sportMeta.label,
+            about: scopeMeta.label,
+            inLanguage: 'fr-FR',
+          }),
+        }}
+      />
     </div>
   )
 }

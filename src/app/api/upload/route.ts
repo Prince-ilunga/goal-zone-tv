@@ -1,8 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
+import sharp from 'sharp'
 import { v2 as cloudinary } from 'cloudinary'
 import { isAuthorized } from '@/lib/admin-auth'
+
+/**
+ * Ajoute un watermark "GOAL ZONE TV" en bas à droite de l'image.
+ * Utilise le logo si disponible, sinon texte.
+ */
+async function addWatermark(buffer: Buffer): Promise<Buffer> {
+  try {
+    const logoPath = path.join(process.cwd(), 'public', 'logo.jpg')
+    const hasLogo = fs.existsSync(logoPath)
+
+    const image = sharp(buffer)
+    const metadata = await image.metadata()
+    const width = metadata.width || 800
+    const height = metadata.height || 600
+
+    // Logo watermark : taille proportionnelle (8% de la largeur, min 40px)
+    const logoWidth = Math.max(40, Math.round(width * 0.08))
+
+    if (hasLogo) {
+      const logoBuffer = fs.readFileSync(logoPath)
+      const resizedLogo = await sharp(logoBuffer)
+        .resize(logoWidth, null, { fit: 'inside' })
+        .composite([{
+          input: Buffer.from(
+            `<svg width="${logoWidth}" height="${logoWidth}"><rect width="${logoWidth}" height="${logoWidth}" fill="white" rx="6"/></svg>`
+          ),
+          blend: 'dest-in',
+        }])
+        .png()
+        .toBuffer()
+
+      const logoMeta = await sharp(resizedLogo).metadata()
+      const logoHeight = logoMeta.height || logoWidth
+
+      // Position : bas-droite avec padding
+      const padding = Math.round(width * 0.02)
+      const left = width - logoWidth - padding
+      const top = height - logoHeight - padding
+
+      return await image
+        .composite([{
+          input: resizedLogo,
+          left: Math.max(0, left),
+          top: Math.max(0, top),
+          blend: 'over',
+        }])
+        .toBuffer()
+    }
+
+    // Fallback : texte watermark
+    const svgText = `<svg width="${width}" height="${height}">
+      <style>
+        .wm { fill: rgba(255,255,255,0.7); font-size: ${Math.max(12, Math.round(width * 0.025))}px; font-family: Arial, sans-serif; font-weight: bold; }
+      </style>
+      <rect x="${width - Math.round(width * 0.22)}" y="${height - Math.round(height * 0.06)}" width="${Math.round(width * 0.2)}" height="${Math.round(height * 0.04)}" fill="rgba(0,51,153,0.6)" rx="4"/>
+      <text x="${width - Math.round(width * 0.12)}" y="${height - Math.round(height * 0.03)}" text-anchor="middle" class="wm">GOAL ZONE TV</text>
+    </svg>`
+
+    return await image
+      .composite([{ input: Buffer.from(svgText), blend: 'over' }])
+      .toBuffer()
+  } catch (err) {
+    console.warn('[upload watermark] erreur, image sans watermark:', err)
+    return buffer
+  }
+}
 
 // Configuration Cloudinary (si les variables sont présentes, on utilise Cloudinary)
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || ''
@@ -65,10 +132,12 @@ export async function POST(req: NextRequest) {
     }
 
     const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
+    const rawBuffer = Buffer.from(arrayBuffer)
+    // Applique le watermark GOAL ZONE TV sur les images (pas les vidéos)
+    const buffer = isImage ? await addWatermark(rawBuffer) : rawBuffer
     const baseName = `media-${Date.now()}`
     const fileName = `${baseName}.${finalExt}`
-    const sizeMo = Math.round((file.size / (1024 * 1024)) * 100) / 100
+    const sizeMo = Math.round((buffer.length / (1024 * 1024)) * 100) / 100
 
     // -------- Méthode 1 : Cloudinary (production) --------
     if (cloudinaryConfigured) {

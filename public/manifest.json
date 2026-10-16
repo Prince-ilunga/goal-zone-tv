@@ -1,0 +1,45 @@
+{
+  "name": "GOAL ZONE TV — Actualité sportive",
+  "short_name": "GOAL ZONE TV",
+  "description": "L'actualité sportive de Moïse Kalala — football, basket, boxe, athlétisme. Provinciale, nationale et internationale.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#003399",
+  "theme_color": "#003399",
+  "categories": ["sports", "news", "magazines"],
+  "lang": "fr",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dernières actus",
+      "short_name": "Actus",
+      "url": "/?filter=latest"
+    },
+    {
+      "name": "Rédaction",
+      "short_name": "Rédaction",
+      "url": "/?admin=1"
+    }
+  ]
+}

@@ -12,6 +12,9 @@ import { AdminLauncher } from '@/components/site/admin-launcher'
 import { ArticleModal } from '@/components/site/article-modal'
 import { db } from '@/lib/db'
 import type { Article, Scope, Sport, SiteStats } from '@/lib/types'
+import { SubscribeButton } from '@/components/site/subscribe-button'
+import { LiveScores } from '@/components/site/live-scores'
+import { PushNotificationButton } from '@/components/site/push-notification-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -119,6 +122,7 @@ export default async function Home() {
       <LiveTicker articles={breaking} />
       <main className="flex-1">
         <Hero featured={featured} recent={recent.slice(0, 5)} />
+        <LiveScores />
         <StatsBar stats={stats} />
         <FootballFocus articles={football} />
         <Newsroom initialArticles={recent} />
@@ -129,6 +133,7 @@ export default async function Home() {
       <SiteFooter />
       <AdminLauncher />
       <ArticleModal />
+      <SubscribeButton />
     </div>
   )
 }

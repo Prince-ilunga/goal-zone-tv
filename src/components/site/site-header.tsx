@@ -10,7 +10,8 @@ import {
 } from '@/components/ui/sheet'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Menu, Search, Lock, X, ChevronRight, MapPin } from 'lucide-react'
+import { Menu, Lock, X, ChevronRight, MapPin } from 'lucide-react'
+import { SearchAutocomplete } from '@/components/site/search-autocomplete'
 import {
   SOCIAL_LINKS,
   CONTACT_INFO,
@@ -108,25 +109,9 @@ export function SiteHeader() {
           </div>
         </Link>
 
-        <form
-          onSubmit={handleSearch}
-          className="ml-auto hidden items-center gap-2 md:flex"
-        >
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher un article..."
-              className="w-64 pl-9"
-              aria-label="Recherche"
-            />
-          </div>
-          <Button type="submit" className="bg-king-blue">
-            <Search className="size-4" />
-            <span className="sr-only">Rechercher</span>
-          </Button>
-        </form>
+        <div className="ml-auto hidden items-center gap-2 md:flex">
+          <SearchAutocomplete className="w-64" placeholder="Rechercher un article..." />
+        </div>
 
         {/* Mobile: hamburger */}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -167,17 +152,10 @@ export function SiteHeader() {
 
             {/* Corps scrollable */}
             <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4" style={{ WebkitOverflowScrolling: 'touch' }}>
-              {/* Recherche en haut (accès rapide) */}
-              <form onSubmit={handleSearch} className="relative mb-5">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Rechercher un article..."
-                  className="h-11 rounded-xl border-border bg-secondary/50 pl-10 text-sm focus-visible:ring-2 focus-visible:ring-primary"
-                  aria-label="Recherche"
-                />
-              </form>
+              {/* Recherche autocomplete en haut (accès rapide) */}
+              <div className="mb-5">
+                <SearchAutocomplete className="w-full" placeholder="Rechercher un article..." />
+              </div>
 
               {/* Section : Navigation */}
               <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
