@@ -195,6 +195,48 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
     }
   }
 
+  // Téléchargement d'un média (image ou vidéo) vers la galerie / dossier Téléchargements
+  const downloadMedia = async (url: string, alt: string, isVideo: boolean) => {
+    if (!url) return
+    const baseName = (alt || 'goal-zone-tv').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || (isVideo ? 'video' : 'image')
+    const ext = isVideo ? 'mp4' : 'png'
+    const fileName = `${baseName}-${Date.now()}.${ext}`
+    toast.info(isVideo ? 'Téléchargement de la vidéo...' : "Téléchargement de l'image...")
+
+    // Méthode 1 : fetch + blob + <a download> (marche sur Chrome desktop + mobile récent)
+    try {
+      const fullUrl = url.startsWith('http') ? url : window.location.origin + url
+      const res = await fetch(fullUrl)
+      if (!res.ok) throw new Error('fetch failed')
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = fileName
+      a.style.display = 'none'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 2000)
+      toast.success(
+        isVideo
+          ? 'Vidéo téléchargée. 📥 Vérifiez votre dossier Téléchargements / galerie.'
+          : 'Image téléchargée. 📥 Vérifiez votre dossier Téléchargements / galerie.'
+      )
+    } catch {
+      // Méthode 2 (fallback mobile) : ouvrir l'URL dans un nouvel onglet
+      // L'utilisateur fait un appui long > "Enregistrer l'image/vidéo"
+      const fullUrl = url.startsWith('http') ? url : window.location.origin + url
+      window.open(fullUrl, '_blank')
+      toast.info(
+        isVideo
+          ? 'Ouvrez la vidéo dans le nouvel onglet, appui long > Enregistrer la vidéo.'
+          : "Ouvrez l'image dans le nouvel onglet, appui long > Enregistrer l'image.",
+        { duration: 6000 }
+      )
+    }
+  }
+
   const onGenerate = async () => {
     if (!draft.title) {
       toast.error('Saisissez un titre avant de générer une image IA.')
@@ -514,6 +556,16 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
                           alt="Aperçu"
                           className="h-full w-full object-cover"
                         />
+                        {/* Bouton télécharger l'image vers la galerie */}
+                        <button
+                          type="button"
+                          onClick={() => downloadMedia(draft.imageUrl, draft.title || 'image-goal-zone-tv', false)}
+                          className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground shadow-lg hover:bg-primary/90"
+                          title="Télécharger l'image dans ma galerie"
+                        >
+                          <Download className="size-3.5" />
+                          Télécharger
+                        </button>
                       </div>
                     )}
                   </div>
@@ -556,11 +608,23 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
                       </div>
                     </div>
                     {draft.videoUrl && (
-                      <video
-                        src={draft.videoUrl}
-                        controls
-                        className="mt-2 aspect-video w-full rounded-md bg-black"
-                      />
+                      <div className="relative mt-2 aspect-video w-full overflow-hidden rounded-md bg-black">
+                        <video
+                          src={draft.videoUrl}
+                          controls
+                          className="h-full w-full object-contain"
+                        />
+                        {/* Bouton télécharger la vidéo vers la galerie */}
+                        <button
+                          type="button"
+                          onClick={() => downloadMedia(draft.videoUrl, draft.title || 'video-goal-zone-tv', true)}
+                          className="absolute bottom-2 right-2 z-10 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground shadow-lg hover:bg-primary/90"
+                          title="Télécharger la vidéo dans ma galerie"
+                        >
+                          <Download className="size-3.5" />
+                          Télécharger vidéo
+                        </button>
+                      </div>
                     )}
                   </div>
 
