@@ -254,3 +254,21 @@ Stage Summary:
 - Hero : affiche le dernier article publié (Premier League) ✅
 - Client-side fetch : contourne le cache Vercel ✅
 - 0 erreur console
+
+---
+Task ID: FIX-UPLOAD-PREVIEW
+Agent: Z.ai Code (main)
+Task: Corriger l'aperçu image qui ne s'affichait pas après upload
+
+Work Log:
+- Bug : onUpload utilisait data.url mais l'API retourne data.mediaUrl → imageUrl jamais défini → aperçu vide
+- Correction onUpload : utilise data.mediaUrl || data.url (compatibilité)
+- Correction onGenerate : utilise data.imageUrl || data.mediaUrl || data.url
+- Ajout message toast indiquant le storage (Cloudinary/local)
+- Restauration .env local (avait été écrasé)
+- Test Agent Browser : upload image → "Image importée (local)" + aperçu visible ✅ + bouton Télécharger présent
+
+Stage Summary:
+- Upload aperçu : ✅ CORRIGÉ (l'image s'affiche maintenant après upload)
+- Fonctionne pour : upload image, upload vidéo, génération IA
+- Push sur GitHub, en attente rebuild Vercel
