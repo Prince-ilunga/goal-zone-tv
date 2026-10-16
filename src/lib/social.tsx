@@ -21,24 +21,28 @@ export function TikTokIcon(props: SVGProps<SVGSVGElement>) {
 export const SOCIAL_LINKS = {
   facebook: {
     label: 'Facebook',
+    short: 'FB',
     href: 'https://www.facebook.com/search/top?q=GOAL%20ZONE%20TV',
     icon: Facebook,
     handle: 'GOAL ZONE TV',
   },
   tiktok: {
     label: 'TikTok',
+    short: 'TikTok',
     href: 'https://www.tiktok.com/search?q=GOAL%20ZONE%20TV',
     icon: TikTokIcon,
     handle: 'GOAL ZONE TV',
   },
   x: {
     label: 'X (Twitter)',
+    short: 'X',
     href: 'https://x.com/search?q=GOAL%20ZONE%20TV',
     icon: Twitter,
     handle: 'GOAL ZONE TV',
   },
   whatsapp: {
     label: 'WhatsApp',
+    short: 'WA',
     href: 'https://wa.me/243970700632?text=Bonjour%20Moïse%2C%20je%20vous%20contacte%20depuis%20GOAL%20ZONE%20TV',
     icon: MessageCircle,
     handle: '+243 970 700 632',
