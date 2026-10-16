@@ -14,8 +14,6 @@ import { db } from '@/lib/db'
 import type { Article, Scope, Sport, SiteStats } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
-export const fetchCache = 'no-store'
 
 function toArticle(a: any): Article {
   return {
