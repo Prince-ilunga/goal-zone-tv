@@ -84,3 +84,20 @@ Task: Restore complete GOAL ZONE TV site after accidental reset
 - **Demo data**: 9 articles seeded automatically on first homepage visit (Lubumbashi football, LINAFOOT, CAF CL, basketball, boxe, mercato, athlétisme, CHAN, Premier League)
 
 Site is fully functional and ready for journalist Moïse Kalala to log in (Ctrl+Shift+E, password `KalalaGoalZone2024`) and publish new content.
+
+---
+Task ID: PUSH-FINAL
+Agent: Z.ai Code (main)
+Task: Pousser la restauration complète sur GitHub après reset accidentel
+
+Work Log:
+- Diagnostic : page.tsx était revenu au template Z.ai initial (30 lignes), dossier src/components/site/ entièrement MANQUANT, toutes les APIs supprimées, schema.prisma réinitialisé
+- Cause probable : reset du projet pendant le déploiement Vercel
+- Délégation au sous-agent full-stack-developer pour restauration complète (48 fichiers recréés)
+- Vérifications : lint 0 erreur, build OK (14 routes), dev server HTTP 200, 9 articles seedés, 0 erreur console
+- Push sur GitHub : https://github.com/Prince-ilunga/goal-zone-tv (commit 3714e10)
+
+Stage Summary:
+- Site 100% restauré et fonctionnel en local
+- Code poussé sur GitHub → Vercel va auto-rebuild
+- En attente : URL Vercel de l'utilisateur pour seed la DB production + tests finaux
