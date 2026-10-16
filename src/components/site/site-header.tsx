@@ -98,11 +98,11 @@ export function SiteHeader() {
             height={48}
           />
           <div className="flex flex-col leading-none">
-            <span className="font-display text-xl font-bold tracking-tight text-primary sm:text-2xl">
+            <span className="font-display text-xl font-extrabold uppercase tracking-tight text-king-navy sm:text-2xl">
               GOAL ZONE TV
             </span>
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              L&apos;info sportive de chez nous
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              L&apos;info sportive · Moïse Kalala
             </span>
           </div>
         </Link>

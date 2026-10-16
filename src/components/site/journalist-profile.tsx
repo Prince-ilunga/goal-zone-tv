@@ -26,24 +26,38 @@ export function JournalistProfile() {
       </header>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Photo + citation */}
-        <Card className="overflow-hidden lg:row-span-2">
-          <div className="aspect-[3/4] w-full overflow-hidden bg-muted">
+        {/* Photo avec dégradé bleu turquoise + nom blanc en bas */}
+        <Card className="overflow-hidden lg:row-span-2 border-0 shadow-xl">
+          <div className="relative aspect-[3/4] w-full overflow-hidden bg-gradient-to-br from-cyan-500 via-blue-600 to-blue-900">
+            {/* Photo */}
             <img
               src="/moise-kalala.jpg"
               alt="Moïse Kalala, journaliste sportif"
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover mix-blend-luminosity opacity-90"
             />
+            {/* Overlay dégradé bas → nom visible */}
+            <div className="absolute inset-0 bg-gradient-to-t from-blue-950/95 via-blue-900/30 to-transparent" />
+
+            {/* Badge logo GOAL ZONE TV en haut à droite */}
+            <div className="absolute top-3 right-3">
+              <img
+                src="/logo.jpg"
+                alt="GOAL ZONE TV"
+                className="h-12 w-12 rounded-lg bg-white p-1 shadow-lg ring-1 ring-white/50 object-contain"
+              />
+            </div>
+
+            {/* Nom + fonction en bas */}
+            <div className="absolute bottom-0 left-0 right-0 p-5">
+              <h3 className="font-display text-2xl font-extrabold text-white uppercase tracking-tight drop-shadow-lg">
+                Moïse Kalala
+              </h3>
+              <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-cyan-200 inline-flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse-dot" />
+                Journaliste sportif · Fondateur
+              </p>
+            </div>
           </div>
-          <CardContent className="p-5">
-            <blockquote className="border-l-4 border-primary pl-4 text-sm italic text-muted-foreground">
-              « Le sport raconte notre histoire. À GOAL ZONE TV, on le raconte
-              avec nos mots, nos couleurs, et la fierté du Haut-Katanga. »
-            </blockquote>
-            <p className="mt-3 text-xs font-semibold text-primary">
-              — Moïse Kalala
-            </p>
-          </CardContent>
         </Card>
 
         {/* Bio */}
