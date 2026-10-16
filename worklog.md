@@ -216,3 +216,21 @@ Stage Summary:
 - Articles : ✅ 9 seedés et affichés publiquement
 - Menu mobile : ✅ sans débordement
 - Upload Cloudinary : ✅ testé et fonctionnel (res.cloudinary.com/duu6yuxu/...)
+
+---
+Task ID: FIX-HERO-EMPTY
+Agent: Z.ai Code (main)
+Task: Corriger hero vide (articles à la une manquants)
+
+Work Log:
+- Diagnostic : articles en DB avaient tous featured=false (seed ancien ne les marquait pas)
+- Création /api/feature-articles : marque les 3 articles les plus récents comme featured=true (+ 1er aussi breaking=true pour le bandeau)
+- Correction seed : ajout featured:true sur l'article LINAFOOT
+- Push + attendre rebuild Vercel
+- Exécution /api/feature-articles sur production → 3 articles marqués (Premier League, CHAN, Athlétisme)
+
+Stage Summary:
+- Hero : ✅ rempli avec article à la une (Premier League derby mancunien)
+- Articles featured : 3 (Premier League, CHAN, Athlétisme) avec breaking sur le 1er
+- Images : 0 cassée
+- Bandeau « Dernière minute » : affiche le 1er article (breaking=true)
