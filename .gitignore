@@ -60,5 +60,5 @@ server.log
 /db/*.sqlite-journal
 
 # Generated uploads (optional, can be committed)
-/public/articles/
-/public/videos/
+# /public/articles/ (KEEP - images needed in production)
+# /public/videos/ (KEEP - videos needed in production)
