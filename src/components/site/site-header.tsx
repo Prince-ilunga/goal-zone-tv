@@ -142,13 +142,6 @@ export function SiteHeader() {
                   L'info sportive · Moïse Kalala
                 </p>
               </div>
-              <button
-                onClick={() => setMobileOpen(false)}
-                aria-label="Fermer"
-                className="h-9 w-9 rounded-full bg-primary-foreground/10 hover:bg-primary-foreground/20 inline-flex items-center justify-center transition-colors shrink-0"
-              >
-                <X className="size-4" />
-              </button>
             </div>
 
             {/* Corps scrollable */}
