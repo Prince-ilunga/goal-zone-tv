@@ -13,6 +13,7 @@ import { ArticleModal } from '@/components/site/article-modal'
 import { db } from '@/lib/db'
 import type { Article, Scope, Sport, SiteStats } from '@/lib/types'
 import { SubscribeButton } from '@/components/site/subscribe-button'
+import { InstallBanner } from '@/components/site/install-banner'
 import { LiveScores } from '@/components/site/live-scores'
 import { PushNotificationButton } from '@/components/site/push-notification-button'
 import Link from 'next/link'
@@ -147,6 +148,7 @@ export default async function Home() {
       <AdminLauncher />
       <ArticleModal />
       <SubscribeButton />
+      <InstallBanner />
     </div>
   )
 }
