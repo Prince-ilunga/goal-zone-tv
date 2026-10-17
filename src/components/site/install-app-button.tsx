@@ -1,49 +1,18 @@
 'use client'
 
-import { Download, Apple, Smartphone, Monitor } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { Download } from 'lucide-react'
 
 /**
  * Bouton "Installer l'application" pour le menu mobile.
- * Déclenche l'événement personnalisé 'gztv-show-install' que la bannière
- * globale (InstallBanner) écoute pour afficher le guide d'installation.
+ * Toujours visible — au clic, déclenche l'événement 'gztv-show-install'
+ * que la bannière globale (InstallBanner) écoute pour afficher le guide.
  */
 export function InstallAppButton({ onNavigate }: { onNavigate?: () => void }) {
-  const [platform, setPlatform] = useState<'ios' | 'android' | 'desktop' | 'unknown'>('unknown')
-  const [installed, setInstalled] = useState(false)
-
-  useEffect(() => {
-    Promise.resolve().then(() => {
-      // Détecte si déjà installé
-      if (window.matchMedia('(display-mode: standalone)').matches) {
-        setInstalled(true)
-        return
-      }
-
-      const ua = navigator.userAgent
-      const isIOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes('Mac') && 'ontouchend' in document)
-      const isAndroid = /Android/i.test(ua)
-
-      if (isIOS) setPlatform('ios')
-      else if (isAndroid) setPlatform('android')
-      else setPlatform('desktop')
-    })
-  }, [])
-
-  if (installed) return null
-
   const handleClick = () => {
     onNavigate?.() // ferme le menu
     // Déclenche l'événement global pour ouvrir la bannière / guide
     window.dispatchEvent(new CustomEvent('gztv-show-install'))
   }
-
-  const PlatformIcon = platform === 'ios' ? Apple : platform === 'desktop' ? Monitor : Smartphone
-  const platformLabel =
-    platform === 'ios' ? 'iPhone'
-    : platform === 'android' ? 'Android'
-    : platform === 'desktop' ? 'Ordinateur'
-    : 'Mobile'
 
   return (
     <button
@@ -56,7 +25,7 @@ export function InstallAppButton({ onNavigate }: { onNavigate?: () => void }) {
         </span>
         Installer l'application
       </span>
-      <span className="text-[10px] uppercase tracking-wide opacity-60">{platformLabel}</span>
+      <span className="text-[10px] uppercase tracking-wide opacity-60">Gratuit</span>
     </button>
   )
 }
