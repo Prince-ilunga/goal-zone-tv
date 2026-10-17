@@ -4,19 +4,19 @@
  * Documentation: https://www.api-football.com/documentation-v3
  * Base URL:      https://v3.football.api-sports.io
  *
- * Quota: 100 requests/day on the free plan. To stay within the limit we keep an
- * in-memory cache with a 10-minute TTL for every endpoint we expose.
+ * Quota: 100 requests/day on the free plan. To avoid burning the quota on
+ * concurrent calls, we de-duplicate in-flight requests (if a request for the
+ * same key is already pending, we await it instead of firing a second one).
+ * We do NOT cache the result — every call hits the API so the scores are
+ * always fresh (live, no delay).
  *
- * All public functions return a normalised `FixtureMatch` array and never throw
- * — if the upstream API fails we simply return [] so the UI can degrade to an
- * empty state instead of crashing the page.
+ * All public functions return a normalised `FixtureMatch` array and never
+ * throw — if the upstream API fails we simply return [] so the UI can
+ * degrade to an empty state instead of crashing the page.
  */
 
 const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY || ''
 const BASE_URL = 'https://v3.football.api-sports.io'
-
-/** TTL of the in-memory cache (10 minutes). */
-const CACHE_TTL_MS = 10 * 60 * 1000
 
 /** League IDs we follow on GOAL ZONE TV. */
 export const LEAGUES = {
@@ -85,29 +85,70 @@ interface ApiFixture {
   }
 }
 
-interface CacheEntry<T> {
-  value: T
-  expiresAt: number
-}
+/**
+ * In-flight request de-duplication map.
+ * Key: request signature ; Value: the Promise resolving to the raw fixtures.
+ * Entries are deleted once the promise settles so the next call always hits
+ * the API again (no time-based cache — scores stay live).
+ */
+const inflight = new Map<string, Promise<ApiFixture[] | null>>()
 
-const cache = new Map<string, CacheEntry<unknown>>()
-
-function getCached<T>(key: string): T | undefined {
-  const entry = cache.get(key)
-  if (!entry) return undefined
-  if (Date.now() > entry.expiresAt) {
-    cache.delete(key)
-    return undefined
+async function fetchApi(
+  path: string,
+  params: Record<string, string | number>,
+): Promise<ApiFixture[] | null> {
+  if (!API_FOOTBALL_KEY) {
+    console.warn('[api-football] API_FOOTBALL_KEY missing — skipping request')
+    return null
   }
-  return entry.value as T
-}
 
-function setCached<T>(key: string, value: T): void {
-  cache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS })
-}
+  const url = new URL(`${BASE_URL}${path}`)
+  for (const [k, v] of Object.entries(params)) {
+    url.searchParams.set(k, String(v))
+  }
 
-function isCacheHit<T>(v: T | undefined): v is T {
-  return v !== undefined
+  const signature = url.toString()
+
+  // If a request for the exact same URL is already in-flight, await it
+  // instead of firing a second one. This prevents burning the quota when
+  // several components mount at the same time.
+  const existing = inflight.get(signature)
+  if (existing) return existing
+
+  const request = (async () => {
+    try {
+      const res = await fetch(url.toString(), {
+        method: 'GET',
+        headers: {
+          'x-apisports-key': API_FOOTBALL_KEY,
+          'x-rapidapi-key': API_FOOTBALL_KEY,
+          'x-rapidapi-host': 'v3.football.api-sports.io',
+        },
+        cache: 'no-store',
+      })
+      if (!res.ok) {
+        console.warn(
+          `[api-football] HTTP ${res.status} for ${path}?${url.searchParams.toString()}`,
+        )
+        return null
+      }
+      const data = (await res.json()) as { response?: ApiFixture[]; errors?: unknown }
+      if (data.errors) {
+        console.warn('[api-football] API errors:', data.errors)
+      }
+      return Array.isArray(data.response) ? data.response : []
+    } catch (err) {
+      console.error('[api-football] fetch failed:', err)
+      return null
+    }
+  })()
+
+  inflight.set(signature, request)
+  try {
+    return await request
+  } finally {
+    inflight.delete(signature)
+  }
 }
 
 /**
@@ -197,108 +238,43 @@ function normaliseFixture(f: ApiFixture): FixtureMatch | null {
   }
 }
 
-async function fetchApi(
-  path: string,
-  params: Record<string, string | number>,
-): Promise<ApiFixture[] | null> {
-  if (!API_FOOTBALL_KEY) {
-    console.warn('[api-football] API_FOOTBALL_KEY missing — skipping request')
-    return null
-  }
-  const url = new URL(`${BASE_URL}${path}`)
-  for (const [k, v] of Object.entries(params)) {
-    url.searchParams.set(k, String(v))
-  }
-
-  try {
-    const res = await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        'x-apisports-key': API_FOOTBALL_KEY,
-        'x-rapidapi-key': API_FOOTBALL_KEY, // some mirrors accept this header too
-        'x-rapidapi-host': 'v3.football.api-sports.io',
-      },
-      // Never cache at the Next.js fetch level — we manage our own TTL.
-      cache: 'no-store',
-    })
-    if (!res.ok) {
-      console.warn(
-        `[api-football] HTTP ${res.status} for ${path}?${url.searchParams.toString()}`,
-      )
-      return null
-    }
-    const data = (await res.json()) as { response?: ApiFixture[]; errors?: unknown }
-    if (data.errors) {
-      // Some errors are returned as objects/arrays — log without throwing
-      console.warn('[api-football] API errors:', data.errors)
-    }
-    return Array.isArray(data.response) ? data.response : []
-  } catch (err) {
-    console.error('[api-football] fetch failed:', err)
-    return null
-  }
-}
-
-/**
- * Fetch fixtures for a given date (YYYY-MM-DD) across all leagues.
- */
+/** Fetch fixtures for a given date (YYYY-MM-DD) across all leagues. */
 export async function fetchFixturesByDate(date: string): Promise<FixtureMatch[]> {
-  const cacheKey = `fixtures:date:${date}`
-  const cached = getCached<FixtureMatch[]>(cacheKey)
-  if (isCacheHit(cached)) return cached
-
   const raw = await fetchApi('/fixtures', { date })
-  const matches = (raw || [])
+  return (raw || [])
     .map(normaliseFixture)
     .filter((m): m is FixtureMatch => m !== null)
-  setCached(cacheKey, matches)
-  return matches
 }
 
-/**
- * Fetch all currently live fixtures (any league).
- */
+/** Fetch all currently live fixtures (any league). */
 export async function fetchLiveFixtures(): Promise<FixtureMatch[]> {
-  const cacheKey = 'fixtures:live:all'
-  const cached = getCached<FixtureMatch[]>(cacheKey)
-  if (isCacheHit(cached)) return cached
-
   const raw = await fetchApi('/fixtures', { live: 'all' })
-  const matches = (raw || [])
+  return (raw || [])
     .map(normaliseFixture)
     .filter((m): m is FixtureMatch => m !== null)
-  setCached(cacheKey, matches)
-  return matches
 }
 
-/**
- * Fetch fixtures filtered by league + date (YYYY-MM-DD).
- */
+/** Fetch fixtures filtered by league + date (YYYY-MM-DD). */
 export async function fetchFixturesByLeague(
   leagueId: number,
   date: string,
 ): Promise<FixtureMatch[]> {
-  const cacheKey = `fixtures:league:${leagueId}:${date}`
-  const cached = getCached<FixtureMatch[]>(cacheKey)
-  if (isCacheHit(cached)) return cached
-
   const raw = await fetchApi('/fixtures', { league: leagueId, date })
-  const matches = (raw || [])
+  return (raw || [])
     .map(normaliseFixture)
     .filter((m): m is FixtureMatch => m !== null)
-  setCached(cacheKey, matches)
-  return matches
 }
 
 /**
- * Generic cached accessor — used by the /api/scores endpoint.
+ * Live accessor — used by the /api/scores endpoint. Always hits the API
+ * (no time-based cache) so scores are always fresh.
  *
- * - `live=true`             → live fixtures across all leagues
+ * - `live=true`                → live fixtures across all leagues
  * - `league=ID&date=YYYY-MM-DD` → fixtures for that league on that date
- * - `date=YYYY-MM-DD`        → all fixtures on that date
+ * - `date=YYYY-MM-DD`          → all fixtures on that date
  *
- * Returns the matches, the source ("api-football") and whether the result was
- * served from the in-memory cache.
+ * Returns the matches, the source ("api-football") and cached=false (always
+ * fresh, we never serve a stale cached value).
  */
 export async function getCachedFixtures(opts: {
   live?: boolean
@@ -306,44 +282,22 @@ export async function getCachedFixtures(opts: {
   date?: string
 }): Promise<{ matches: FixtureMatch[]; cached: boolean }> {
   if (opts.live) {
-    const cacheKey = 'fixtures:live:all'
-    const before = getCached<FixtureMatch[]>(cacheKey)
-    if (isCacheHit(before)) {
-      return { matches: before, cached: true }
-    }
     const matches = await fetchLiveFixtures()
     return { matches, cached: false }
   }
   if (opts.league && opts.date) {
-    const cacheKey = `fixtures:league:${opts.league}:${opts.date}`
-    const before = getCached<FixtureMatch[]>(cacheKey)
-    if (isCacheHit(before)) {
-      return { matches: before, cached: true }
-    }
     const matches = await fetchFixturesByLeague(opts.league, opts.date)
     return { matches, cached: false }
   }
   if (opts.date) {
-    const cacheKey = `fixtures:date:${opts.date}`
-    const before = getCached<FixtureMatch[]>(cacheKey)
-    if (isCacheHit(before)) {
-      return { matches: before, cached: true }
-    }
     const matches = await fetchFixturesByDate(opts.date)
     return { matches, cached: false }
   }
   // Default: today across all tracked leagues
   const today = new Date().toISOString().split('T')[0]
-  const cacheKey = `fixtures:date:${today}`
-  const before = getCached<FixtureMatch[]>(cacheKey)
-  if (isCacheHit(before)) {
-    return { matches: before, cached: true }
-  }
   const all = await fetchFixturesByDate(today)
   // Keep only tracked leagues so we don't pollute the homepage with obscure ones
   const filtered = all.filter((m) => TRACKED_LEAGUE_IDS.includes(m.leagueId))
-  // Cache the filtered list separately so the homepage doesn't re-filter every call
-  setCached(`fixtures:today:tracked`, filtered)
   return { matches: filtered, cached: false }
 }
 
