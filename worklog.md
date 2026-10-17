@@ -317,3 +317,29 @@ Stage Summary:
 - Test Agent Browser : LiveScores visible ✅, bouton abonnement flottant ✅, manifest chargé ✅, recherche autocomplete ✅
 - VLM : "8/10 — excellent lisibilité sportive, hiérarchie claire, fonctionnalités bien placées"
 - Push sur GitHub, en attente rebuild Vercel
+
+---
+Task ID: LIVE-SCORES-C
+Agent: full-stack-developer
+Task: Implement Option C — real scores via API-Football + manual LINAFOOT
+
+Work Log:
+- src/lib/api-football.ts (NEW) — API-Football v3 helper: LEAGUES map (PL 39, La Liga 140, Serie A 135, Bundesliga 78, Ligue 1 61, CAF CL 566, CAN 38), in-memory Map cache 10-min TTL, fetchFixturesByDate/fetchLiveFixtures/fetchFixturesByLeague, getCachedFixtures (live/league/date), normaliseFixture maps API status → live|finished|upcoming, returns FixtureMatch[] never throws
+- src/app/api/scores/route.ts (NEW) — GET /api/scores with params: ?manual=true (DB), ?live=true (API live), ?league=ID&date=YYYY-MM-DD, ?date=YYYY-MM-DD (today's tracked leagues default). Response: { matches, source, cached, updatedAt }
+- src/app/api/matches/route.ts (NEW) — CRUD: GET (public, optional ?status), POST (isAuthorized, validates competition+teams), PUT ?id (isAuthorized), DELETE ?id (isAuthorized)
+- src/app/scores/page.tsx (NEW) — server component, metadata "Scores en direct — GOAL ZONE TV", canonical /scores, blue king hero with red pulse dot "TEMPS RÉEL · API-FOOTBALL", renders ScoresTabs client component, SiteHeader + LiveTicker + SiteFooter
+- src/components/site/scores-tabs.tsx (NEW) — 4 tabs: En direct (live API + manual, 60s refresh), Aujourd'hui (today's fixtures), International (7 league sub-tabs: PL/La Liga/Serie A/Bundesliga/Ligue 1/CAF CL/CAN), LINAFOOT & RDC (manual). Skeletons, error state with retry, empty state per tab, refresh button, cache badge with updatedAt time, note "Scores saisis par GOAL ZONE TV"
+- src/components/site/live-scores.tsx (REPLACED) — removed DEMO_MATCHES, removed "bientôt connectés" disclaimer, now fetches real /api/scores?live=true + /api/matches?status=live, combines top 4, auto-refresh 60s, empty state "Aucun match en direct maintenant", "Voir tous les scores →" link in header
+- src/components/site/admin-panel.tsx (UPDATED) — added third tab "Scores" between Publier and Mes articles (Trophy icon), form (competition select with LINAFOOT/Ligue Provinciale Haut-Katanga/Coupe du Congo/Super Coupe RDC/CHAN/Coupe CAF/Autre, datetime-local, homeTeam/awayTeam, scores, status, minute), list with edit/delete buttons (scrollable max-h-72), edit mode pre-fills form, toast on success/error
+- src/app/page.tsx (UPDATED) — added "Voir tous les scores →" link (with ArrowRight icon) below LiveScores section
+- src/app/sitemap.ts (UPDATED) — added /scores entry with changeFrequency 'always', priority 0.9
+- src/lib/db.ts (UPDATED) — added PRISMA_CACHE_VERSION='v2-match-model' invalidation logic so long-running dev server picks up the new Match model without manual restart; removed noisy 'query' log level
+
+Stage Summary:
+- Lint: `bun run lint` → 0 errors, 0 warnings
+- Build: not run per system instructions ("Never use `bun run build`"); all routes compiled cleanly via Turbopack dev server
+- Endpoint tests: /api/scores?live=true 200 (returns real API-Football fixtures Vega Real, Mirassol, etc.), /api/scores?league=39&date=today 200 (PL empty today), /api/scores?date=today 200 (today's tracked leagues), /api/matches GET 200 (empty initially), POST/PUT/DELETE /api/matches all 200 with auth (tested full CRUD cycle on Mazembe vs V.Club)
+- /scores page renders 200 (title "Scores en direct" + "TEMPS RÉEL · API-FOOTBALL" + ScoresTabs)
+- Homepage renders 200 with "Voir tous les scores →" link; no DEMO_MATCHES or "bientôt connectés" text in HTML
+- Dev server was restarted (stale Oct-16 instance had outdated Prisma client without Match model); now running PID 11410 with fresh Prisma client
+- Quota safety: 10-min in-memory cache + graceful empty-array fallback when API-Football fails (no UI crash)

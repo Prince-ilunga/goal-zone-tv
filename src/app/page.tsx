@@ -15,6 +15,8 @@ import type { Article, Scope, Sport, SiteStats } from '@/lib/types'
 import { SubscribeButton } from '@/components/site/subscribe-button'
 import { LiveScores } from '@/components/site/live-scores'
 import { PushNotificationButton } from '@/components/site/push-notification-button'
+import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -123,6 +125,17 @@ export default async function Home() {
       <main className="flex-1">
         <Hero featured={featured} recent={recent.slice(0, 5)} />
         <LiveScores />
+        <div className="bg-secondary/30 pb-5">
+          <div className="container mx-auto max-w-7xl px-4">
+            <Link
+              href="/scores"
+              className="group inline-flex items-center gap-1.5 text-sm font-display font-bold uppercase tracking-wide text-primary hover:underline"
+            >
+              Voir tous les scores
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </div>
+        </div>
         <StatsBar stats={stats} />
         <FootballFocus articles={football} />
         <Newsroom initialArticles={recent} />

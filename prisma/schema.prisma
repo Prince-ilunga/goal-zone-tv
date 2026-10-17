@@ -80,3 +80,22 @@ model SiteStats {
   articlesCount  Int      @default(0)
   createdAt      DateTime @default(now())
 }
+
+// Matchs manuels (LINAFOOT, ligue provinciale) — saisis par Moïse Kalala
+// Les scores internationaux (Premier League, etc.) viennent de l'API-Football
+model Match {
+  id           String   @id @default(cuid())
+  competition  String   // "LINAFOOT", "Ligue Provinciale Haut-Katanga", etc.
+  homeTeam     String
+  awayTeam     String
+  homeScore    Int      @default(0)
+  awayScore    Int      @default(0)
+  status       String   @default("upcoming") // "live" | "finished" | "upcoming"
+  minute       String   @default("")  // "67'" | "HT" | "FT" | "20:00"
+  matchDate    DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([competition])
+  @@index([status])
+}

@@ -38,6 +38,9 @@ import {
   Newspaper,
   Download,
   Save,
+  Trophy,
+  Pencil,
+  X,
 } from 'lucide-react'
 import { SCOPES, SPORTS, SCOPE_META, SPORT_META, type Article, type Scope, type Sport } from '@/lib/types'
 import { slugify, formatDate, estimateReadMinutes } from '@/lib/format'
@@ -49,6 +52,49 @@ interface AdminPanelProps {
 
 const TOKEN_KEY = 'gztv-token'
 const DRAFT_KEY = 'gztv-draft-v1'
+
+// ---------- Manual matches (Scores) ----------
+
+interface AdminMatch {
+  id: string
+  competition: string
+  homeTeam: string
+  awayTeam: string
+  homeScore: number
+  awayScore: number
+  status: 'live' | 'finished' | 'upcoming'
+  minute: string
+  matchDate: string
+  createdAt: string
+  updatedAt: string
+}
+
+const MATCH_COMPETITIONS = [
+  'LINAFOOT',
+  'Ligue Provinciale Haut-Katanga',
+  'Coupe du Congo',
+  'Super Coupe RDC',
+  'CHAN',
+  'Coupe CAF',
+  'Autre',
+]
+
+const MATCH_STATUSES: { value: 'upcoming' | 'live' | 'finished'; label: string }[] = [
+  { value: 'upcoming', label: 'À venir' },
+  { value: 'live', label: 'En direct' },
+  { value: 'finished', label: 'Terminé' },
+]
+
+const MATCH_DRAFT_DEFAULT = {
+  competition: 'LINAFOOT',
+  homeTeam: '',
+  awayTeam: '',
+  homeScore: 0,
+  awayScore: 0,
+  status: 'upcoming' as 'upcoming' | 'live' | 'finished',
+  minute: '',
+  matchDate: new Date().toISOString().slice(0, 16), // datetime-local format
+}
 
 const DRAFT_DEFAULT = {
   title: '',
@@ -75,6 +121,13 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
   const [generating, setGenerating] = useState(false)
   const [articles, setArticles] = useState<Article[]>([])
   const [listLoading, setListLoading] = useState(false)
+
+  // ----- Manual matches (Scores) -----
+  const [matchDraft, setMatchDraft] = useState(MATCH_DRAFT_DEFAULT)
+  const [matches, setMatches] = useState<AdminMatch[]>([])
+  const [matchesLoading, setMatchesLoading] = useState(false)
+  const [matchSaving, setMatchSaving] = useState(false)
+  const [editingMatchId, setEditingMatchId] = useState<string | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
@@ -106,11 +159,116 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
   // Fetch articles when token becomes available
   useEffect(() => {
     if (token && open) fetchArticles()
+    if (token && open) fetchMatches()
   }, [token, open])
 
   const authHeaders = () => ({
     'x-admin-token': token || '',
   })
+
+  // ---------- Manual matches CRUD ----------
+
+  const fetchMatches = async () => {
+    setMatchesLoading(true)
+    try {
+      const res = await fetch('/api/matches', { cache: 'no-store' })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setMatches(data.matches || [])
+    } catch {
+      toast.error('Impossible de charger les matchs.')
+    } finally {
+      setMatchesLoading(false)
+    }
+  }
+
+  const resetMatchDraft = () => {
+    setMatchDraft({
+      ...MATCH_DRAFT_DEFAULT,
+      matchDate: new Date().toISOString().slice(0, 16),
+    })
+    setEditingMatchId(null)
+  }
+
+  const onEditMatch = (m: AdminMatch) => {
+    setEditingMatchId(m.id)
+    // Convert ISO matchDate to datetime-local format (YYYY-MM-DDTHH:mm)
+    const localDate = m.matchDate
+      ? new Date(m.matchDate).toISOString().slice(0, 16)
+      : new Date().toISOString().slice(0, 16)
+    setMatchDraft({
+      competition: MATCH_COMPETITIONS.includes(m.competition) ? m.competition : 'Autre',
+      homeTeam: m.homeTeam,
+      awayTeam: m.awayTeam,
+      homeScore: m.homeScore,
+      awayScore: m.awayScore,
+      status: m.status,
+      minute: m.minute,
+      matchDate: localDate,
+    })
+    // Switch to scores tab if not already
+    const trigger = document.querySelector<HTMLButtonElement>(
+      '[data-tab-trigger="scores"]',
+    )
+    trigger?.click()
+  }
+
+  const onSubmitMatch = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!matchDraft.homeTeam || !matchDraft.awayTeam || !matchDraft.competition) {
+      toast.error('Compétition, équipe domicile et équipe extérieur sont obligatoires.')
+      return
+    }
+    setMatchSaving(true)
+    try {
+      const payload = {
+        competition: matchDraft.competition,
+        homeTeam: matchDraft.homeTeam.trim(),
+        awayTeam: matchDraft.awayTeam.trim(),
+        homeScore: Number(matchDraft.homeScore) || 0,
+        awayScore: Number(matchDraft.awayScore) || 0,
+        status: matchDraft.status,
+        minute: matchDraft.minute,
+        matchDate: new Date(matchDraft.matchDate).toISOString(),
+      }
+      const url = editingMatchId
+        ? `/api/matches?id=${editingMatchId}`
+        : '/api/matches'
+      const method = editingMatchId ? 'PUT' : 'POST'
+      const res = await fetch(url, {
+        method,
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Échec de l\'enregistrement')
+      toast.success(
+        editingMatchId ? 'Match mis à jour.' : 'Match ajouté avec succès.',
+      )
+      resetMatchDraft()
+      fetchMatches()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Enregistrement impossible.')
+    } finally {
+      setMatchSaving(false)
+    }
+  }
+
+  const onDeleteMatch = async (id: string) => {
+    if (!confirm('Supprimer ce match définitivement ?')) return
+    try {
+      const res = await fetch(`/api/matches?id=${id}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      })
+      if (!res.ok) throw new Error()
+      setMatches(matches.filter((m) => m.id !== id))
+      if (editingMatchId === id) resetMatchDraft()
+      toast.success('Match supprimé.')
+    } catch {
+      toast.error('Suppression impossible.')
+    }
+  }
 
   const onLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -142,6 +300,8 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
     localStorage.removeItem(TOKEN_KEY)
     setToken(null)
     setArticles([])
+    setMatches([])
+    resetMatchDraft()
     toast.info('Déconnexion réussie.')
   }
 
@@ -382,6 +542,9 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
               <TabsList className="bg-transparent">
                 <TabsTrigger value="publish">
                   <Newspaper className="mr-1.5 size-4" /> Publier
+                </TabsTrigger>
+                <TabsTrigger value="scores" data-tab-trigger="scores">
+                  <Trophy className="mr-1.5 size-4" /> Scores
                 </TabsTrigger>
                 <TabsTrigger value="list">
                   Mes articles ({articles.length})
@@ -679,6 +842,283 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
                   Publier
                 </Button>
               </DialogFooter>
+            </TabsContent>
+
+            {/* ----- SCORES TAB (manual matches) ----- */}
+            <TabsContent
+              value="scores"
+              className="m-0 min-h-0 flex-1 overflow-y-auto overscroll-contain"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
+              <div className="space-y-5 p-5">
+                <div>
+                  <h3 className="font-display text-base font-bold uppercase tracking-tight inline-flex items-center gap-2">
+                    <Trophy className="size-4 text-primary" />
+                    {editingMatchId ? 'Modifier le match' : 'Ajouter un match'}
+                  </h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Saisissez les scores LINAFOOT, ligues provinciales et coupes
+                    RDC. Les scores internationaux (Premier League, etc.) sont
+                    automatiquement récupérés via API-Football.
+                  </p>
+                </div>
+
+                <form onSubmit={onSubmitMatch} className="space-y-4 rounded-md border bg-card p-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="match-competition">Compétition *</Label>
+                      <Select
+                        value={matchDraft.competition}
+                        onValueChange={(v) =>
+                          setMatchDraft({ ...matchDraft, competition: v })
+                        }
+                      >
+                        <SelectTrigger id="match-competition">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MATCH_COMPETITIONS.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="match-date">Date / heure</Label>
+                      <Input
+                        id="match-date"
+                        type="datetime-local"
+                        value={matchDraft.matchDate}
+                        onChange={(e) =>
+                          setMatchDraft({ ...matchDraft, matchDate: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="match-home">Équipe domicile *</Label>
+                      <Input
+                        id="match-home"
+                        value={matchDraft.homeTeam}
+                        onChange={(e) =>
+                          setMatchDraft({ ...matchDraft, homeTeam: e.target.value })
+                        }
+                        placeholder="TP Mazembe"
+                        maxLength={120}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="match-away">Équipe extérieur *</Label>
+                      <Input
+                        id="match-away"
+                        value={matchDraft.awayTeam}
+                        onChange={(e) =>
+                          setMatchDraft({ ...matchDraft, awayTeam: e.target.value })
+                        }
+                        placeholder="AS V.Club"
+                        maxLength={120}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="match-home-score">Score domicile</Label>
+                        <Input
+                          id="match-home-score"
+                          type="number"
+                          min={0}
+                          max={99}
+                          value={matchDraft.homeScore}
+                          onChange={(e) =>
+                            setMatchDraft({
+                              ...matchDraft,
+                              homeScore: parseInt(e.target.value, 10) || 0,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="match-away-score">Score extérieur</Label>
+                        <Input
+                          id="match-away-score"
+                          type="number"
+                          min={0}
+                          max={99}
+                          value={matchDraft.awayScore}
+                          onChange={(e) =>
+                            setMatchDraft({
+                              ...matchDraft,
+                              awayScore: parseInt(e.target.value, 10) || 0,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="match-status">Statut</Label>
+                      <Select
+                        value={matchDraft.status}
+                        onValueChange={(v) =>
+                          setMatchDraft({
+                            ...matchDraft,
+                            status: v as 'upcoming' | 'live' | 'finished',
+                          })
+                        }
+                      >
+                        <SelectTrigger id="match-status">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MATCH_STATUSES.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>
+                              {s.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="match-minute">Minute / info</Label>
+                    <Input
+                      id="match-minute"
+                      value={matchDraft.minute}
+                      onChange={(e) =>
+                        setMatchDraft({ ...matchDraft, minute: e.target.value })
+                      }
+                      placeholder="Ex: 67', MT, FT, 20:00"
+                      maxLength={20}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Pour un match à venir, indiquez l&apos;heure (ex: 20:00).
+                      Pendant le match, indiquez la minute (ex: 67&apos;).
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <Button
+                      type="submit"
+                      disabled={matchSaving}
+                      className="bg-king-blue"
+                    >
+                      {matchSaving ? (
+                        <Loader2 className="mr-1 size-4 animate-spin" />
+                      ) : (
+                        <Save className="mr-1 size-4" />
+                      )}
+                      {editingMatchId ? 'Mettre à jour' : 'Enregistrer'}
+                    </Button>
+                    {editingMatchId && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={resetMatchDraft}
+                      >
+                        <X className="mr-1 size-4" /> Annuler la modification
+                      </Button>
+                    )}
+                  </div>
+                </form>
+
+                <div>
+                  <h4 className="mb-2 font-display text-sm font-bold uppercase tracking-tight">
+                    Matchs existants ({matches.length})
+                  </h4>
+                  {matchesLoading ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">
+                      <Loader2 className="mx-auto mb-2 size-5 animate-spin" />
+                      Chargement des matchs…
+                    </p>
+                  ) : matches.length === 0 ? (
+                    <p className="rounded-md border border-dashed bg-card px-4 py-6 text-center text-sm text-muted-foreground">
+                      Aucun match pour le moment. Ajoutez votre premier match
+                      ci-dessus.
+                    </p>
+                  ) : (
+                    <div className="max-h-72 space-y-2 overflow-y-auto overscroll-contain pr-1 scrollbar-thin">
+                      {matches.map((m) => (
+                        <div
+                          key={m.id}
+                          className="flex flex-col gap-2 rounded-md border bg-card p-3 sm:flex-row sm:items-center"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-1 flex items-center gap-1.5">
+                              <Badge
+                                variant="secondary"
+                                className="px-1 py-0 text-[10px] uppercase tracking-wide"
+                              >
+                                {m.competition}
+                              </Badge>
+                              {m.status === 'live' && (
+                                <Badge
+                                  variant="destructive"
+                                  className="px-1 py-0 text-[10px] uppercase tracking-wide"
+                                >
+                                  <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse-dot rounded-full bg-white" />
+                                  {m.minute || 'LIVE'}
+                                </Badge>
+                              )}
+                              {m.status === 'finished' && (
+                                <Badge
+                                  variant="outline"
+                                  className="px-1 py-0 text-[10px] uppercase tracking-wide"
+                                >
+                                  Terminé
+                                </Badge>
+                              )}
+                              {m.status === 'upcoming' && (
+                                <Badge
+                                  variant="outline"
+                                  className="px-1 py-0 text-[10px] uppercase tracking-wide"
+                                >
+                                  À venir
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="truncate text-sm font-semibold">
+                              {m.homeTeam}{' '}
+                              <span className="font-display font-bold text-primary">
+                                {m.homeScore} - {m.awayScore}
+                              </span>{' '}
+                              {m.awayTeam}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {formatDate(m.matchDate)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => onEditMatch(m)}
+                              aria-label="Modifier"
+                              title="Modifier ce match"
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => onDeleteMatch(m.id)}
+                              aria-label="Supprimer"
+                              className="text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </TabsContent>
 
             {/* ----- LIST TAB ----- */}

@@ -1,0 +1,772 @@
+     1→     1→'use client'
+     2→     2→
+     3→     3→import { useEffect, useRef, useState } from 'react'
+     4→     4→import {
+     5→     5→  Dialog,
+     6→     6→  DialogContent,
+     7→     7→  DialogHeader,
+     8→     8→  DialogTitle,
+     9→     9→  DialogDescription,
+    10→    10→  DialogFooter,
+    11→    11→} from '@/components/ui/dialog'
+    12→    12→import { Button } from '@/components/ui/button'
+    13→    13→import { Input } from '@/components/ui/input'
+    14→    14→import { Label } from '@/components/ui/label'
+    15→    15→import { Textarea } from '@/components/ui/textarea'
+    16→    16→import {
+    17→    17→  Select,
+    18→    18→  SelectContent,
+    19→    19→  SelectItem,
+    20→    20→  SelectTrigger,
+    21→    21→  SelectValue,
+    22→    22→} from '@/components/ui/select'
+    23→    23→import { Checkbox } from '@/components/ui/checkbox'
+    24→    24→import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+    25→    25→import { Badge } from '@/components/ui/badge'
+    26→    26→import { toast } from 'sonner'
+    27→    27→import {
+    28→    28→  Lock,
+    29→    29→  LogOut,
+    30→    30→  Loader2,
+    31→    31→  Send,
+    32→    32→  Trash2,
+    33→    33→  Upload,
+    34→    34→  Image as ImageIcon,
+    35→    35→  Film,
+    36→    36→  Sparkles,
+    37→    37→  Link as LinkIcon,
+    38→    38→  Newspaper,
+    39→    39→  Download,
+    40→    40→  Save,
+    41→    41→} from 'lucide-react'
+    42→    42→import { SCOPES, SPORTS, SCOPE_META, SPORT_META, type Article, type Scope, type Sport } from '@/lib/types'
+    43→    43→import { slugify, formatDate, estimateReadMinutes } from '@/lib/format'
+    44→    44→
+    45→    45→interface AdminPanelProps {
+    46→    46→  open: boolean
+    47→    47→  onOpenChange: (open: boolean) => void
+    48→    48→}
+    49→    49→
+    50→    50→const TOKEN_KEY = 'gztv-token'
+    51→    51→const DRAFT_KEY = 'gztv-draft-v1'
+    52→    52→
+    53→    53→const DRAFT_DEFAULT = {
+    54→    54→  title: '',
+    55→    55→  excerpt: '',
+    56→    56→  content: '',
+    57→    57→  scope: 'NATIONAL' as Scope,
+    58→    58→  sport: 'FOOTBALL' as Sport,
+    59→    59→  location: '',
+    60→    60→  imageUrl: '',
+    61→    61→  videoUrl: '',
+    62→    62→  featured: false,
+    63→    63→  breaking: false,
+    64→    64→  source: '',
+    65→    65→}
+    66→    66→
+    67→    67→export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
+    68→    68→  const [token, setToken] = useState<string | null>(null)
+    69→    69→  const [password, setPassword] = useState('')
+    70→    70→  const [loginLoading, setLoginLoading] = useState(false)
+    71→    71→
+    72→    72→  const [draft, setDraft] = useState(DRAFT_DEFAULT)
+    73→    73→  const [saving, setSaving] = useState(false)
+    74→    74→  const [uploading, setUploading] = useState(false)
+    75→    75→  const [generating, setGenerating] = useState(false)
+    76→    76→  const [articles, setArticles] = useState<Article[]>([])
+    77→    77→  const [listLoading, setListLoading] = useState(false)
+    78→    78→
+    79→    79→  const fileInputRef = useRef<HTMLInputElement>(null)
+    80→    80→  const videoInputRef = useRef<HTMLInputElement>(null)
+    81→    81→
+    82→    82→  // Restore token + draft on mount
+    83→    83→  useEffect(() => {
+    84→    84→    if (typeof window === 'undefined') return
+    85→    85→    const t = localStorage.getItem(TOKEN_KEY)
+    86→    86→    if (t) setToken(t)
+    87→    87→    const d = localStorage.getItem(DRAFT_KEY)
+    88→    88→    if (d) {
+    89→    89→      try {
+    90→    90→        setDraft({ ...DRAFT_DEFAULT, ...JSON.parse(d) })
+    91→    91→      } catch {
+    92→    92→        // ignore
+    93→    93→      }
+    94→    94→    }
+    95→    95→  }, [])
+    96→    96→
+    97→    97→  // Persist draft whenever it changes
+    98→    98→  useEffect(() => {
+    99→    99→    if (typeof window === 'undefined') return
+   100→   100→    const t = setTimeout(() => {
+   101→   101→      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+   102→   102→    }, 400)
+   103→   103→    return () => clearTimeout(t)
+   104→   104→  }, [draft])
+   105→   105→
+   106→   106→  // Fetch articles when token becomes available
+   107→   107→  useEffect(() => {
+   108→   108→    if (token && open) fetchArticles()
+   109→   109→  }, [token, open])
+   110→   110→
+   111→   111→  const authHeaders = () => ({
+   112→   112→    'x-admin-token': token || '',
+   113→   113→  })
+   114→   114→
+   115→   115→  const onLogin = async (e: React.FormEvent) => {
+   116→   116→    e.preventDefault()
+   117→   117→    if (!password) {
+   118→   118→      toast.error('Veuillez saisir le mot de passe.')
+   119→   119→      return
+   120→   120→    }
+   121→   121→    setLoginLoading(true)
+   122→   122→    try {
+   123→   123→      const res = await fetch('/api/admin/login', {
+   124→   124→        method: 'POST',
+   125→   125→        headers: { 'Content-Type': 'application/json' },
+   126→   126→        body: JSON.stringify({ password }),
+   127→   127→      })
+   128→   128→      const data = await res.json()
+   129→   129→      if (!res.ok) throw new Error(data.error || 'Échec de connexion')
+   130→   130→      localStorage.setItem(TOKEN_KEY, data.token)
+   131→   131→      setToken(data.token)
+   132→   132→      setPassword('')
+   133→   133→      toast.success('Bienvenue, Moïse ! Accès rédaction accordé.')
+   134→   134→    } catch (err) {
+   135→   135→      toast.error(err instanceof Error ? err.message : 'Connexion impossible.')
+   136→   136→    } finally {
+   137→   137→      setLoginLoading(false)
+   138→   138→    }
+   139→   139→  }
+   140→   140→
+   141→   141→  const onLogout = () => {
+   142→   142→    localStorage.removeItem(TOKEN_KEY)
+   143→   143→    setToken(null)
+   144→   144→    setArticles([])
+   145→   145→    toast.info('Déconnexion réussie.')
+   146→   146→  }
+   147→   147→
+   148→   148→  const fetchArticles = async () => {
+   149→   149→    setListLoading(true)
+   150→   150→    try {
+   151→   151→      const res = await fetch('/api/admin-articles', {
+   152→   152→        headers: authHeaders(),
+   153→   153→        cache: 'no-store',
+   154→   154→      })
+   155→   155→      if (!res.ok) throw new Error()
+   156→   156→      const data = await res.json()
+   157→   157→      setArticles(data.articles || [])
+   158→   158→    } catch {
+   159→   159→      toast.error('Impossible de charger vos articles.')
+   160→   160→    } finally {
+   161→   161→      setListLoading(false)
+   162→   162→    }
+   163→   163→  }
+   164→   164→
+   165→   165→  const onUpload = async (
+   166→   166→    e: React.ChangeEvent<HTMLInputElement>,
+   167→   167→    type: 'image' | 'video',
+   168→   168→  ) => {
+   169→   169→    const file = e.target.files?.[0]
+   170→   170→    if (!file) return
+   171→   171→    setUploading(true)
+   172→   172→    try {
+   173→   173→      const fd = new FormData()
+   174→   174→      fd.append('file', file)
+   175→   175→      const res = await fetch('/api/upload', {
+   176→   176→        method: 'POST',
+   177→   177→        headers: authHeaders(),
+   178→   178→        body: fd,
+   179→   179→      })
+   180→   180→      const data = await res.json()
+   181→   181→      if (!res.ok) throw new Error(data.error || 'Upload échoué')
+   182→   182→      // L'API retourne mediaUrl (pas url) — support des 2 pour compatibilité
+   183→   183→      const mediaUrl = data.mediaUrl || data.url
+   184→   184→      if (!mediaUrl) throw new Error('URL du média manquante dans la réponse')
+   185→   185→      if (type === 'image') {
+   186→   186→        setDraft((d) => ({ ...d, imageUrl: mediaUrl }))
+   187→   187→        toast.success(`Image importée (${data.storage === 'cloudinary' ? 'Cloudinary' : 'local'}).`)
+   188→   188→      } else {
+   189→   189→        setDraft((d) => ({ ...d, videoUrl: mediaUrl }))
+   190→   190→        toast.success(`Vidéo importée (${data.storage === 'cloudinary' ? 'Cloudinary' : 'local'}).`)
+   191→   191→      }
+   192→   192→    } catch (err) {
+   193→   193→      toast.error(err instanceof Error ? err.message : 'Upload impossible.')
+   194→   194→    } finally {
+   195→   195→      setUploading(false)
+   196→   196→      if (fileInputRef.current) fileInputRef.current.value = ''
+   197→   197→      if (videoInputRef.current) videoInputRef.current.value = ''
+   198→   198→    }
+   199→   199→  }
+   200→   200→
+   201→   201→  // Téléchargement d'un média (image ou vidéo) vers la galerie / dossier Téléchargements
+   202→   202→  const downloadMedia = async (url: string, alt: string, isVideo: boolean) => {
+   203→   203→    if (!url) return
+   204→   204→    const baseName = (alt || 'goal-zone-tv').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || (isVideo ? 'video' : 'image')
+   205→   205→    const ext = isVideo ? 'mp4' : 'png'
+   206→   206→    const fileName = `${baseName}-${Date.now()}.${ext}`
+   207→   207→    toast.info(isVideo ? 'Téléchargement de la vidéo...' : "Téléchargement de l'image...")
+   208→   208→
+   209→   209→    // Méthode 1 : fetch + blob + <a download> (marche sur Chrome desktop + mobile récent)
+   210→   210→    try {
+   211→   211→      const fullUrl = url.startsWith('http') ? url : window.location.origin + url
+   212→   212→      const res = await fetch(fullUrl)
+   213→   213→      if (!res.ok) throw new Error('fetch failed')
+   214→   214→      const blob = await res.blob()
+   215→   215→      const objectUrl = URL.createObjectURL(blob)
+   216→   216→      const a = document.createElement('a')
+   217→   217→      a.href = objectUrl
+   218→   218→      a.download = fileName
+   219→   219→      a.style.display = 'none'
+   220→   220→      document.body.appendChild(a)
+   221→   221→      a.click()
+   222→   222→      document.body.removeChild(a)
+   223→   223→      setTimeout(() => URL.revokeObjectURL(objectUrl), 2000)
+   224→   224→      toast.success(
+   225→   225→        isVideo
+   226→   226→          ? 'Vidéo téléchargée. 📥 Vérifiez votre dossier Téléchargements / galerie.'
+   227→   227→          : 'Image téléchargée. 📥 Vérifiez votre dossier Téléchargements / galerie.'
+   228→   228→      )
+   229→   229→    } catch {
+   230→   230→      // Méthode 2 (fallback mobile) : ouvrir l'URL dans un nouvel onglet
+   231→   231→      // L'utilisateur fait un appui long > "Enregistrer l'image/vidéo"
+   232→   232→      const fullUrl = url.startsWith('http') ? url : window.location.origin + url
+   233→   233→      window.open(fullUrl, '_blank')
+   234→   234→      toast.info(
+   235→   235→        isVideo
+   236→   236→          ? 'Ouvrez la vidéo dans le nouvel onglet, appui long > Enregistrer la vidéo.'
+   237→   237→          : "Ouvrez l'image dans le nouvel onglet, appui long > Enregistrer l'image.",
+   238→   238→        { duration: 6000 }
+   239→   239→      )
+   240→   240→    }
+   241→   241→  }
+   242→   242→
+   243→   243→  const onGenerate = async () => {
+   244→   244→    if (!draft.title) {
+   245→   245→      toast.error('Saisissez un titre avant de générer une image IA.')
+   246→   246→      return
+   247→   247→    }
+   248→   248→    setGenerating(true)
+   249→   249→    try {
+   250→   250→      const res = await fetch('/api/generate-image', {
+   251→   251→        method: 'POST',
+   252→   252→        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+   253→   253→        body: JSON.stringify({
+   254→   254→          prompt: `Illustration journalistique pour un article de sport intitulé : "${draft.title}". Style photo éditorial, scène dynamique, haute qualité.`,
+   255→   255→        }),
+   256→   256→      })
+   257→   257→      const data = await res.json()
+   258→   258→      if (!res.ok) throw new Error(data.error || 'Génération échouée')
+   259→   259→      // L'API generate-image retourne imageUrl (pas url)
+   260→   260→      const mediaUrl = data.imageUrl || data.mediaUrl || data.url
+   261→   261→      if (!mediaUrl) throw new Error('URL image manquante')
+   262→   262→      setDraft((d) => ({ ...d, imageUrl: mediaUrl }))
+   263→   263→      toast.success('Image IA générée avec succès !')
+   264→   264→    } catch (err) {
+   265→   265→      toast.error(err instanceof Error ? err.message : 'Génération impossible.')
+   266→   266→    } finally {
+   267→   267→      setGenerating(false)
+   268→   268→    }
+   269→   269→  }
+   270→   270→
+   271→   271→  const onPublish = async (e: React.FormEvent) => {
+   272→   272→    e.preventDefault()
+   273→   273→    if (!draft.title || !draft.excerpt || !draft.content) {
+   274→   274→      toast.error('Titre, chapô et contenu sont obligatoires.')
+   275→   275→      return
+   276→   276→    }
+   277→   277→    setSaving(true)
+   278→   278→    try {
+   279→   279→      const res = await fetch('/api/articles', {
+   280→   280→        method: 'POST',
+   281→   281→        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+   282→   282→        body: JSON.stringify({
+   283→   283→          ...draft,
+   284→   284→          readMinutes: estimateReadMinutes(draft.content),
+   285→   285→        }),
+   286→   286→      })
+   287→   287→      const data = await res.json()
+   288→   288→      if (!res.ok) throw new Error(data.error || 'Publication échouée')
+   289→   289→      toast.success('Article publié avec succès !')
+   290→   290→      setDraft(DRAFT_DEFAULT)
+   291→   291→      localStorage.removeItem(DRAFT_KEY)
+   292→   292→      fetchArticles()
+   293→   293→    } catch (err) {
+   294→   294→      toast.error(err instanceof Error ? err.message : 'Publication impossible.')
+   295→   295→    } finally {
+   296→   296→      setSaving(false)
+   297→   297→    }
+   298→   298→  }
+   299→   299→
+   300→   300→  const onDelete = async (id: string) => {
+   301→   301→    if (!confirm('Supprimer cet article définitivement ?')) return
+   302→   302→    try {
+   303→   303→      const res = await fetch(`/api/articles?id=${id}`, {
+   304→   304→        method: 'DELETE',
+   305→   305→        headers: authHeaders(),
+   306→   306→      })
+   307→   307→      if (!res.ok) throw new Error()
+   308→   308→      setArticles(articles.filter((a) => a.id !== id))
+   309→   309→      toast.success('Article supprimé.')
+   310→   310→    } catch {
+   311→   311→      toast.error('Suppression impossible.')
+   312→   312→    }
+   313→   313→  }
+   314→   314→
+   315→   315→  const downloadUrl = (url: string | null | undefined) => {
+   316→   316→    if (!url) return
+   317→   317→    const a = document.createElement('a')
+   318→   318→    a.href = url
+   319→   319→    a.download = url.split('/').pop() || 'media'
+   320→   320→    a.click()
+   321→   321→  }
+   322→   322→
+   323→   323→  // Block dialog close while saving/uploading
+   324→   324→  const blockClose = (e: Event) => {
+   325→   325→    if (saving || uploading) e.preventDefault()
+   326→   326→  }
+   327→   327→
+   328→   328→  return (
+   329→   329→    <Dialog open={open} onOpenChange={onOpenChange}>
+   330→   330→      <DialogContent
+   331→   331→        showCloseButton={false}
+   332→   332→        className="max-h-[92vh] w-full max-w-3xl gap-0 overflow-hidden p-0 sm:max-w-3xl flex flex-col"
+   333→   333→        onPointerDownOutside={blockClose}
+   334→   334→        onInteractOutside={blockClose}
+   335→   335→        onEscapeKeyDown={blockClose}
+   336→   336→      >
+   337→   337→        <DialogHeader className="border-b bg-king-blue text-primary-foreground px-5 py-4 shrink-0">
+   338→   338→          <DialogTitle className="flex items-center gap-2 font-display text-xl">
+   339→   339→            <Lock className="size-5" /> Espace rédaction — GOAL ZONE TV
+   340→   340→          </DialogTitle>
+   341→   341→          <DialogDescription className="text-primary-foreground/80">
+   342→   342→            {token
+   343→   343→              ? 'Gérez vos articles : publier, lister, supprimer.'
+   344→   344→              : 'Accès réservé à Moïse Kalala. Saisissez votre mot de passe.'}
+   345→   345→          </DialogDescription>
+   346→   346→        </DialogHeader>
+   347→   347→
+   348→   348→        {!token ? (
+   349→   349→          /* ----- LOGIN ----- */
+   350→   350→          <form onSubmit={onLogin} className="space-y-4 p-6">
+   351→   351→            <div className="space-y-1.5">
+   352→   352→              <Label htmlFor="admin-pwd">Mot de passe</Label>
+   353→   353→              <Input
+   354→   354→                id="admin-pwd"
+   355→   355→                type="password"
+   356→   356→                value={password}
+   357→   357→                onChange={(e) => setPassword(e.target.value)}
+   358→   358→                placeholder="••••••••"
+   359→   359→                autoFocus
+   360→   360→              />
+   361→   361→            </div>
+   362→   362→            <Button
+   363→   363→              type="submit"
+   364→   364→              disabled={loginLoading}
+   365→   365→              className="w-full bg-king-blue"
+   366→   366→            >
+   367→   367→              {loginLoading ? (
+   368→   368→                <Loader2 className="mr-2 size-4 animate-spin" />
+   369→   369→              ) : (
+   370→   370→                <Lock className="mr-2 size-4" />
+   371→   371→              )}
+   372→   372→              Se connecter
+   373→   373→            </Button>
+   374→   374→            <p className="text-xs text-muted-foreground">
+   375→   375→              Astuce : raccourci clavier <kbd className="rounded bg-secondary px-1.5 py-0.5">Ctrl + Shift + E</kbd> pour ouvrir/fermer ce panneau.
+   376→   376→            </p>
+   377→   377→          </form>
+   378→   378→        ) : (
+   379→   379→          /* ----- TABS ----- */
+   380→   380→          <Tabs defaultValue="publish" className="flex w-full min-h-0 flex-1 flex-col">
+   381→   381→            <div className="flex shrink-0 items-center justify-between border-b px-3">
+   382→   382→              <TabsList className="bg-transparent">
+   383→   383→                <TabsTrigger value="publish">
+   384→   384→                  <Newspaper className="mr-1.5 size-4" /> Publier
+   385→   385→                </TabsTrigger>
+   386→   386→                <TabsTrigger value="list">
+   387→   387→                  Mes articles ({articles.length})
+   388→   388→                </TabsTrigger>
+   389→   389→              </TabsList>
+   390→   390→              <Button variant="ghost" size="sm" onClick={onLogout}>
+   391→   391→                <LogOut className="mr-1 size-3.5" /> Déconnexion
+   392→   392→              </Button>
+   393→   393→            </div>
+   394→   394→
+   395→   395→            {/* ----- PUBLISH TAB ----- */}
+   396→   396→            <TabsContent value="publish" className="m-0 min-h-0 flex-1 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+   397→   397→              <form onSubmit={onPublish} className="space-y-4 p-5">
+   398→   398→                  <div className="space-y-1.5">
+   399→   399→                    <Label htmlFor="title">Titre *</Label>
+   400→   400→                    <Input
+   401→   401→                      id="title"
+   402→   402→                      value={draft.title}
+   403→   403→                      onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+   404→   404→                      placeholder="Ex: TP Mazembe s'impose 3-1 face à Lupopo"
+   405→   405→                      maxLength={160}
+   406→   406→                    />
+   407→   407→                    {draft.title && (
+   408→   408→                      <p className="text-xs text-muted-foreground">
+   409→   409→                        Slug :{' '}
+   410→   410→                        <code className="rounded bg-secondary px-1 py-0.5">
+   411→   411→                          /articles/{slugify(draft.title)}
+   412→   412→                        </code>
+   413→   413→                      </p>
+   414→   414→                    )}
+   415→   415→                  </div>
+   416→   416→
+   417→   417→                  <div className="space-y-1.5">
+   418→   418→                    <Label htmlFor="excerpt">Chapô *</Label>
+   419→   419→                    <Textarea
+   420→   420→                      id="excerpt"
+   421→   421→                      value={draft.excerpt}
+   422→   422→                      onChange={(e) => setDraft({ ...draft, excerpt: e.target.value })}
+   423→   423→                      placeholder="Résumé court qui apparaîtra dans les cartes (2-3 phrases)."
+   424→   424→                      rows={3}
+   425→   425→                      maxLength={400}
+   426→   426→                    />
+   427→   427→                  </div>
+   428→   428→
+   429→   429→                  <div className="grid gap-4 sm:grid-cols-2">
+   430→   430→                    <div className="space-y-1.5">
+   431→   431→                      <Label htmlFor="scope">Portée</Label>
+   432→   432→                      <Select
+   433→   433→                        value={draft.scope}
+   434→   434→                        onValueChange={(v) => setDraft({ ...draft, scope: v as Scope })}
+   435→   435→                      >
+   436→   436→                        <SelectTrigger id="scope">
+   437→   437→                          <SelectValue />
+   438→   438→                        </SelectTrigger>
+   439→   439→                        <SelectContent>
+   440→   440→                          {SCOPES.map((s) => (
+   441→   441→                            <SelectItem key={s} value={s}>
+   442→   442→                              {SCOPE_META[s].label}
+   443→   443→                            </SelectItem>
+   444→   444→                          ))}
+   445→   445→                        </SelectContent>
+   446→   446→                      </Select>
+   447→   447→                    </div>
+   448→   448→                    <div className="space-y-1.5">
+   449→   449→                      <Label htmlFor="sport">Discipline</Label>
+   450→   450→                      <Select
+   451→   451→                        value={draft.sport}
+   452→   452→                        onValueChange={(v) => setDraft({ ...draft, sport: v as Sport })}
+   453→   453→                      >
+   454→   454→                        <SelectTrigger id="sport">
+   455→   455→                          <SelectValue />
+   456→   456→                        </SelectTrigger>
+   457→   457→                        <SelectContent>
+   458→   458→                          {SPORTS.map((s) => (
+   459→   459→                            <SelectItem key={s} value={s}>
+   460→   460→                              {SPORT_META[s].emoji} {SPORT_META[s].label}
+   461→   461→                            </SelectItem>
+   462→   462→                          ))}
+   463→   463→                        </SelectContent>
+   464→   464→                      </Select>
+   465→   465→                    </div>
+   466→   466→                  </div>
+   467→   467→
+   468→   468→                  <div className="grid gap-4 sm:grid-cols-2">
+   469→   469→                    <div className="space-y-1.5">
+   470→   470→                      <Label htmlFor="location">Lieu</Label>
+   471→   471→                      <Input
+   472→   472→                        id="location"
+   473→   473→                        value={draft.location}
+   474→   474→                        onChange={(e) => setDraft({ ...draft, location: e.target.value })}
+   475→   475→                        placeholder="Lubumbashi, Kinshasa, Le Caire..."
+   476→   476→                        maxLength={80}
+   477→   477→                      />
+   478→   478→                    </div>
+   479→   479→                    <div className="space-y-1.5">
+   480→   480→                      <Label htmlFor="source">Source (optionnel)</Label>
+   481→   481→                      <Input
+   482→   482→                        id="source"
+   483→   483→                        value={draft.source}
+   484→   484→                        onChange={(e) => setDraft({ ...draft, source: e.target.value })}
+   485→   485→                        placeholder="AFP, CAF, LINAFOOT..."
+   486→   486→                        maxLength={80}
+   487→   487→                      />
+   488→   488→                    </div>
+   489→   489→                  </div>
+   490→   490→
+   491→   491→                  <div className="space-y-1.5">
+   492→   492→                    <Label htmlFor="content">Contenu *</Label>
+   493→   493→                    <Textarea
+   494→   494→                      id="content"
+   495→   495→                      value={draft.content}
+   496→   496→                      onChange={(e) => setDraft({ ...draft, content: e.target.value })}
+   497→   497→                      placeholder="Rédigez votre article ici. Séparez les paragraphes par des sauts de ligne."
+   498→   498→                      rows={8}
+   499→   499→                      maxLength={15000}
+   500→   500→                    />
+   501→   501→                    <p className="text-xs text-muted-foreground">
+   502→   502→                      ≈ {estimateReadMinutes(draft.content)} min de lecture ·{' '}
+   503→   503→                      {draft.content.split(/\s+/).filter(Boolean).length} mots
+   504→   504→                    </p>
+   505→   505→                  </div>
+   506→   506→
+   507→   507→                  {/* Médias */}
+   508→   508→                  <div className="space-y-2 rounded-md border p-3">
+   509→   509→                    <div className="flex items-center gap-2">
+   510→   510→                      <ImageIcon className="size-4 text-primary" />
+   511→   511→                      <span className="text-sm font-semibold">Image à la une</span>
+   512→   512→                    </div>
+   513→   513→                    <div className="flex flex-wrap items-center gap-2">
+   514→   514→                      <input
+   515→   515→                        ref={fileInputRef}
+   516→   516→                        type="file"
+   517→   517→                        accept="image/*"
+   518→   518→                        onChange={(e) => onUpload(e, 'image')}
+   519→   519→                        className="hidden"
+   520→   520→                      />
+   521→   521→                      <Button
+   522→   522→                        type="button"
+   523→   523→                        variant="outline"
+   524→   524→                        size="sm"
+   525→   525→                        onClick={() => fileInputRef.current?.click()}
+   526→   526→                        disabled={uploading}
+   527→   527→                      >
+   528→   528→                        {uploading ? (
+   529→   529→                          <Loader2 className="mr-1 size-3.5 animate-spin" />
+   530→   530→                        ) : (
+   531→   531→                          <Upload className="mr-1 size-3.5" />
+   532→   532→                        )}
+   533→   533→                        Importer image
+   534→   534→                      </Button>
+   535→   535→                      <Button
+   536→   536→                        type="button"
+   537→   537→                        variant="outline"
+   538→   538→                        size="sm"
+   539→   539→                        onClick={onGenerate}
+   540→   540→                        disabled={generating}
+   541→   541→                      >
+   542→   542→                        {generating ? (
+   543→   543→                          <Loader2 className="mr-1 size-3.5 animate-spin" />
+   544→   544→                        ) : (
+   545→   545→                          <Sparkles className="mr-1 size-3.5" />
+   546→   546→                        )}
+   547→   547→                        Générer IA
+   548→   548→                      </Button>
+   549→   549→                      <div className="relative flex-1 min-w-[200px]">
+   550→   550→                        <LinkIcon className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+   551→   551→                        <Input
+   552→   552→                          value={draft.imageUrl}
+   553→   553→                          onChange={(e) => setDraft({ ...draft, imageUrl: e.target.value })}
+   554→   554→                          placeholder="https://... (URL image)"
+   555→   555→                          className="h-9 pl-8 text-xs"
+   556→   556→                        />
+   557→   557→                      </div>
+   558→   558→                    </div>
+   559→   559→                    {draft.imageUrl && (
+   560→   560→                      <div className="relative mt-2 aspect-video w-full overflow-hidden rounded-md bg-muted">
+   561→   561→                        <img
+   562→   562→                          src={draft.imageUrl}
+   563→   563→                          alt="Aperçu"
+   564→   564→                          className="h-full w-full object-cover"
+   565→   565→                        />
+   566→   566→                        {/* Bouton télécharger l'image vers la galerie */}
+   567→   567→                        <button
+   568→   568→                          type="button"
+   569→   569→                          onClick={() => downloadMedia(draft.imageUrl, draft.title || 'image-goal-zone-tv', false)}
+   570→   570→                          className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground shadow-lg hover:bg-primary/90"
+   571→   571→                          title="Télécharger l'image dans ma galerie"
+   572→   572→                        >
+   573→   573→                          <Download className="size-3.5" />
+   574→   574→                          Télécharger
+   575→   575→                        </button>
+   576→   576→                      </div>
+   577→   577→                    )}
+   578→   578→                  </div>
+   579→   579→
+   580→   580→                  <div className="space-y-2 rounded-md border p-3">
+   581→   581→                    <div className="flex items-center gap-2">
+   582→   582→                      <Film className="size-4 text-primary" />
+   583→   583→                      <span className="text-sm font-semibold">Vidéo (optionnel)</span>
+   584→   584→                    </div>
+   585→   585→                    <div className="flex flex-wrap items-center gap-2">
+   586→   586→                      <input
+   587→   587→                        ref={videoInputRef}
+   588→   588→                        type="file"
+   589→   589→                        accept="video/*"
+   590→   590→                        onChange={(e) => onUpload(e, 'video')}
+   591→   591→                        className="hidden"
+   592→   592→                      />
+   593→   593→                      <Button
+   594→   594→                        type="button"
+   595→   595→                        variant="outline"
+   596→   596→                        size="sm"
+   597→   597→                        onClick={() => videoInputRef.current?.click()}
+   598→   598→                        disabled={uploading}
+   599→   599→                      >
+   600→   600→                        {uploading ? (
+   601→   601→                          <Loader2 className="mr-1 size-3.5 animate-spin" />
+   602→   602→                        ) : (
+   603→   603→                          <Upload className="mr-1 size-3.5" />
+   604→   604→                        )}
+   605→   605→                        Importer vidéo
+   606→   606→                      </Button>
+   607→   607→                      <div className="relative flex-1 min-w-[200px]">
+   608→   608→                        <LinkIcon className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+   609→   609→                        <Input
+   610→   610→                          value={draft.videoUrl}
+   611→   611→                          onChange={(e) => setDraft({ ...draft, videoUrl: e.target.value })}
+   612→   612→                          placeholder="https://... (URL vidéo MP4)"
+   613→   613→                          className="h-9 pl-8 text-xs"
+   614→   614→                        />
+   615→   615→                      </div>
+   616→   616→                    </div>
+   617→   617→                    {draft.videoUrl && (
+   618→   618→                      <div className="relative mt-2 aspect-video w-full overflow-hidden rounded-md bg-black">
+   619→   619→                        <video
+   620→   620→                          src={draft.videoUrl}
+   621→   621→                          controls
+   622→   622→                          className="h-full w-full object-contain"
+   623→   623→                        />
+   624→   624→                        {/* Bouton télécharger la vidéo vers la galerie */}
+   625→   625→                        <button
+   626→   626→                          type="button"
+   627→   627→                          onClick={() => downloadMedia(draft.videoUrl, draft.title || 'video-goal-zone-tv', true)}
+   628→   628→                          className="absolute bottom-2 right-2 z-10 inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground shadow-lg hover:bg-primary/90"
+   629→   629→                          title="Télécharger la vidéo dans ma galerie"
+   630→   630→                        >
+   631→   631→                          <Download className="size-3.5" />
+   632→   632→                          Télécharger vidéo
+   633→   633→                        </button>
+   634→   634→                      </div>
+   635→   635→                    )}
+   636→   636→                  </div>
+   637→   637→
+   638→   638→                  {/* Options */}
+   639→   639→                  <div className="flex flex-wrap items-center gap-4 rounded-md border p-3">
+   640→   640→                    <label className="flex items-center gap-2 text-sm">
+   641→   641→                      <Checkbox
+   642→   642→                        checked={draft.featured}
+   643→   643→                        onCheckedChange={(v) => setDraft({ ...draft, featured: !!v })}
+   644→   644→                      />
+   645→   645→                      <span>⭐ Article à la une</span>
+   646→   646→                    </label>
+   647→   647→                    <label className="flex items-center gap-2 text-sm">
+   648→   648→                      <Checkbox
+   649→   649→                        checked={draft.breaking}
+   650→   650→                        onCheckedChange={(v) => setDraft({ ...draft, breaking: !!v })}
+   651→   651→                      />
+   652→   652→                      <span>🔥 Breaking news</span>
+   653→   653→                    </label>
+   654→   654→                  </div>
+   655→   655→                </form>
+   656→   656→
+   657→   657→              <DialogFooter className="border-t p-4">
+   658→   658→                <Button
+   659→   659→                  type="button"
+   660→   660→                  variant="ghost"
+   661→   661→                  onClick={() => {
+   662→   662→                    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+   663→   663→                    toast.success('Brouillon sauvegardé localement.')
+   664→   664→                  }}
+   665→   665→                >
+   666→   666→                  <Save className="mr-1 size-4" /> Brouillon
+   667→   667→                </Button>
+   668→   668→                <Button
+   669→   669→                  type="submit"
+   670→   670→                  onClick={onPublish}
+   671→   671→                  disabled={saving || uploading}
+   672→   672→                  className="bg-king-blue"
+   673→   673→                >
+   674→   674→                  {saving ? (
+   675→   675→                    <Loader2 className="mr-1 size-4 animate-spin" />
+   676→   676→                  ) : (
+   677→   677→                    <Send className="mr-1 size-4" />
+   678→   678→                  )}
+   679→   679→                  Publier
+   680→   680→                </Button>
+   681→   681→              </DialogFooter>
+   682→   682→            </TabsContent>
+   683→   683→
+   684→   684→            {/* ----- LIST TAB ----- */}
+   685→   685→            <TabsContent value="list" className="m-0 min-h-0 flex-1 overflow-y-auto overscroll-contain p-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+   686→   686→                <div className="space-y-2">
+   687→   687→                  {listLoading ? (
+   688→   688→                    <p className="py-8 text-center text-sm text-muted-foreground">
+   689→   689→                      <Loader2 className="mx-auto mb-2 size-6 animate-spin" />
+   690→   690→                      Chargement de vos articles...
+   691→   691→                    </p>
+   692→   692→                  ) : articles.length === 0 ? (
+   693→   693→                    <p className="py-8 text-center text-sm text-muted-foreground">
+   694→   694→                      Aucun article publié pour le moment.
+   695→   695→                    </p>
+   696→   696→                  ) : (
+   697→   697→                    articles.map((a) => (
+   698→   698→                      <div
+   699→   699→                        key={a.id}
+   700→   700→                        className="flex flex-col gap-2 rounded-md border bg-card p-3 sm:flex-row sm:items-center"
+   701→   701→                      >
+   702→   702→                        <div className="h-16 w-24 flex-shrink-0 overflow-hidden rounded bg-muted">
+   703→   703→                          {a.imageUrl ? (
+   704→   704→                            <img
+   705→   705→                              src={a.imageUrl}
+   706→   706→                              alt=""
+   707→   707→                              className="h-full w-full object-cover"
+   708→   708→                            />
+   709→   709→                          ) : (
+   710→   710→                            <div className="flex h-full w-full items-center justify-center text-2xl">
+   711→   711→                              {SPORT_META[a.sport].emoji}
+   712→   712→                            </div>
+   713→   713→                          )}
+   714→   714→                        </div>
+   715→   715→                        <div className="min-w-0 flex-1">
+   716→   716→                          <p className="line-clamp-2 text-sm font-semibold">
+   717→   717→                            {a.title}
+   718→   718→                          </p>
+   719→   719→                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+   720→   720→                            <Badge variant="secondary" className="px-1 py-0 text-[10px]">
+   721→   721→                              {SCOPE_META[a.scope].label}
+   722→   722→                            </Badge>
+   723→   723→                            <Badge variant="outline" className="px-1 py-0 text-[10px]">
+   724→   724→                              {SPORT_META[a.sport].emoji} {SPORT_META[a.sport].label}
+   725→   725→                            </Badge>
+   726→   726→                            {a.featured && (
+   727→   727→                              <Badge className="bg-primary px-1 py-0 text-[10px]">À la une</Badge>
+   728→   728→                            )}
+   729→   729→                            {a.breaking && (
+   730→   730→                              <Badge variant="destructive" className="px-1 py-0 text-[10px]">
+   731→   731→                                Breaking
+   732→   732→                              </Badge>
+   733→   733→                            )}
+   734→   734→                            <span className="text-[10px] text-muted-foreground">
+   735→   735→                              {formatDate(a.createdAt)}
+   736→   736→                            </span>
+   737→   737→                          </div>
+   738→   738→                        </div>
+   739→   739→                        <div className="flex items-center gap-1">
+   740→   740→                          {a.imageUrl && (
+   741→   741→                            <Button
+   742→   742→                              variant="ghost"
+   743→   743→                              size="icon"
+   744→   744→                              onClick={() => downloadUrl(a.imageUrl)}
+   745→   745→                              aria-label="Télécharger l'image"
+   746→   746→                              title="Télécharger le média"
+   747→   747→                            >
+   748→   748→                              <Download className="size-4" />
+   749→   749→                            </Button>
+   750→   750→                          )}
+   751→   751→                          <Button
+   752→   752→                            variant="ghost"
+   753→   753→                            size="icon"
+   754→   754→                            onClick={() => onDelete(a.id)}
+   755→   755→                            aria-label="Supprimer"
+   756→   756→                            className="text-destructive hover:bg-destructive/10"
+   757→   757→                          >
+   758→   758→                            <Trash2 className="size-4" />
+   759→   759→                          </Button>
+   760→   760→                        </div>
+   761→   761→                      </div>
+   762→   762→                    ))
+   763→   763→                  )}
+   764→   764→                </div>
+   765→   765→            </TabsContent>
+   766→   766→          </Tabs>
+   767→   767→        )}
+   768→   768→      </DialogContent>
+   769→   769→    </Dialog>
+   770→   770→  )
+   771→   771→}
+   772→   772→
