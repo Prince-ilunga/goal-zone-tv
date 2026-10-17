@@ -343,3 +343,31 @@ Stage Summary:
 - Homepage renders 200 with "Voir tous les scores →" link; no DEMO_MATCHES or "bientôt connectés" text in HTML
 - Dev server was restarted (stale Oct-16 instance had outdated Prisma client without Match model); now running PID 11410 with fresh Prisma client
 - Quota safety: 10-min in-memory cache + graceful empty-array fallback when API-Football fails (no UI crash)
+
+---
+Task ID: LIVE-SCORES-C
+Agent: Z.ai Code (main)
+Task: Option C — scores réels API-Football + manuel LINAFOOT
+
+Work Log:
+- Ajout modèle Match au schema Prisma (competition, teams, scores, status, minute, matchDate)
+- .env : ajout API_FOOTBALL_KEY
+- src/lib/api-football.ts : intégration API-Football v3 (7 ligues : PL 39, La Liga 140, Serie A 135, Bundesliga 78, Ligue 1 61, CAF CL 566, CAN 38) + cache 10 min + normalisation + gestion erreurs
+- /api/scores : GET (live, by league, by date, manual) avec cache + source identification
+- /api/matches : CRUD complet (GET public, POST/PUT/DELETE auth)
+- /scores page dédiée avec onglets (En direct, Aujourd'hui, International 7 ligues, LINAFOOT & RDC)
+- scores-tabs.tsx : client component avec auto-refresh 60s, skeletons, error states
+- live-scores.tsx : REMPLACÉ — plus de DEMO_MATCHES, fetch vraies données API-Football + matchs manuels
+- admin-panel : 3e onglet "Scores" avec formulaire CRUD pour matchs LINAFOOT manuels
+- init-db : ajout création table Match + 2 index
+- sitemap : ajout /scores
+
+Stage Summary:
+- Tests production validés :
+  * /api/scores?live=true → vraies données API-Football (Vega Real vs Cibao, 85')
+  * /api/matches GET → retourne competitions LINAFOOT/Ligue Haut-Katanga/Coupe du Congo
+  * POST /api/matches → match créé (TP Mazembe 2-1 AS V.Club, live 67')
+  * DELETE → match supprimé proprement
+  * /scores page → HTTP 200, onglets visibles
+  * Table Match créée sur Neon via /api/init-db
+- Build : OK ; Lint : 0 erreur ; Push : commit d93ad06
