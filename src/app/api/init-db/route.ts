@@ -73,6 +73,24 @@ export async function POST() {
       )`,
       check: () => db.comment.count(),
     },
+    {
+      name: 'Match',
+      create: `CREATE TABLE IF NOT EXISTS "Match" (
+        "id" TEXT NOT NULL,
+        "competition" TEXT NOT NULL,
+        "homeTeam" TEXT NOT NULL,
+        "awayTeam" TEXT NOT NULL,
+        "homeScore" INTEGER NOT NULL DEFAULT 0,
+        "awayScore" INTEGER NOT NULL DEFAULT 0,
+        "status" TEXT NOT NULL DEFAULT 'upcoming',
+        "minute" TEXT NOT NULL DEFAULT '',
+        "matchDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "Match_pkey" PRIMARY KEY ("id")
+      )`,
+      check: () => db.match.count(),
+    },
   ]
 
   for (const { name, create, check } of tables) {
@@ -110,6 +128,8 @@ export async function POST() {
     `CREATE INDEX IF NOT EXISTS "Like_articleId_idx" ON "Like"("articleId")`,
     `CREATE INDEX IF NOT EXISTS "Comment_articleId_idx" ON "Comment"("articleId")`,
     `CREATE INDEX IF NOT EXISTS "Comment_approved_idx" ON "Comment"("approved")`,
+    `CREATE INDEX IF NOT EXISTS "Match_competition_idx" ON "Match"("competition")`,
+    `CREATE INDEX IF NOT EXISTS "Match_status_idx" ON "Match"("status")`,
   ]
   let indexCount = 0
   for (const idx of indexes) {
