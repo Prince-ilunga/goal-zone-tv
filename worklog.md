@@ -395,3 +395,29 @@ Stage Summary:
 - Watermark GOAL ZONE TV : appliqué automatiquement
 - Aperçu : s'affiche correctement après upload
 - Bouton Télécharger : présent et fonctionnel
+
+---
+Task ID: FIX-TIMEZONE-INSTALL
+Agent: Z.ai Code (main)
+Task: Corriger heure publication + bouton installer app dans menu
+
+Work Log:
+1. HEURE : 
+   - Création fonction toSiteDate() qui ajoute Z si date naive (sans fuseau)
+   - timeAgo : gère les dates futures ("à l'instant") + moins de 60s ("à l'instant")
+   - formatDate : convertit vers fuseau Africa/Kinshasa (UTC+2) pour affichage complet
+   - Vérification : article créé 08:49 UTC, maintenant 08:57 UTC → "il y a 8 minutes" correct
+2. BOUTON INSTALLER APP :
+   - Création InstallAppButton component :
+     * Détecte plateforme (iOS/Android/desktop)
+     * Android : utilise beforeinstallprompt API (installation native)
+     * iPhone : affiche guide pas-à-pas (Share > Sur l'écran d'accueil > Ajouter)
+     * Détecte si déjà installé (display-mode: standalone) → masque le bouton
+   - Intégration dans menu mobile (entre Rédaction et Suivez-nous)
+   - Guide visuel avec icônes Apple/Smartphone + 3 étapes claires
+
+Stage Summary:
+- Heure : corrigée (fuseau Africa/Kinshasa UTC+2)
+- Bouton Installer : visible dans menu mobile ✅ ("INSTALLER L'APPLICATION" - "GRATUIT")
+- Guide iPhone : 3 étapes (Share > Écran d'accueil > Ajouter)
+- Build : OK ; Lint : 0 erreur ; Push : commit sur GitHub
