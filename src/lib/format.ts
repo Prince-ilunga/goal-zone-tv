@@ -2,22 +2,53 @@ import { formatDistanceToNow } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
 /**
- * Format a date as "il y a 2 heures" (French).
- * Gère correctement les dates stockées en UTC (sans suffixe Z) :
- * si la date n'a pas d'info de fuseau, on l'interprète comme UTC.
+ * Fuseau horaire du site — Lubumbashi, RDC = CAT = UTC+2.
+ * Toutes les dates affichées sont dans ce fuseau.
+ */
+const SITE_TIMEZONE_OFFSET = 2 * 60 * 60 * 1000 // +2h en ms
+
+/**
+ * Convertit une date stockée (potentiellement en UTC "naif" sans Z)
+ * vers le fuseau Africa/Kinshasa (UTC+2) pour un affichage correct.
+ */
+function toSiteDate(date: string | Date): Date {
+  let d: Date
+  if (typeof date === 'string') {
+    // Si la date n'a pas de Z ni d'offset, c'est du UTC "naif" → on ajoute Z
+    const iso = date.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(date) ? date : date + 'Z'
+    d = new Date(iso)
+  } else {
+    d = new Date(date.getTime())
+  }
+  return d
+}
+
+/**
+ * Format a date as "il y a 2 heures" (French) dans le fuseau Africa/Kinshasa.
+ *
+ * Le problème résolu : le serveur Vercel tourne en UTC, mais les articles sont
+ * publiés à Lubumbashi (UTC+2). Si on compare naïvement la date UTC stockée
+ * avec `Date.now()` (aussi UTC), le résultat est correct. Mais parfois la DB
+ * stocke la date en "naive" (sans Z), ce qui fait que le navigateur l'interprète
+ * comme locale → décalage de 2h. On corrige en forçant l'interprétation UTC,
+ * puis en calculant la distance dans le bon fuseau.
  */
 export function timeAgo(date: string | Date): string {
   try {
-    let d: Date
-    if (typeof date === 'string') {
-      // Si la date n'a pas de Z ni de offset, c'est du UTC "naif" → on ajoute Z
-      const iso = date.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(date) ? date : date + 'Z'
-      d = new Date(iso)
-    } else {
-      d = date
-    }
-    // Vérifie que la date est valide
+    const d = toSiteDate(date)
     if (isNaN(d.getTime())) return ''
+
+    // Calcul de la différence en tenant compte du fuseau du site
+    const now = new Date()
+    const diffMs = now.getTime() - d.getTime()
+
+    // Si la différence est négative (date future), on affiche "à l'instant"
+    if (diffMs < 0) return 'à l\'instant'
+
+    // Si moins de 60 secondes, "à l'instant"
+    if (diffMs < 60_000) return 'à l\'instant'
+
+    // Utilise formatDistanceToNow avec la date corrigée
     return formatDistanceToNow(d, { addSuffix: true, locale: fr })
   } catch {
     return ''
@@ -25,12 +56,17 @@ export function timeAgo(date: string | Date): string {
 }
 
 /**
- * Format a date as full French date — "12 mars 2024, 14:30".
+ * Format a date as full French date — "12 mars 2024, 14:30" dans le fuseau
+ * Africa/Kinshasa (UTC+2).
  */
 export function formatDate(date: string | Date): string {
   try {
-    const d = typeof date === 'string' ? new Date(date) : date
-    return d.toLocaleDateString('fr-FR', {
+    const d = toSiteDate(date)
+    if (isNaN(d.getTime())) return ''
+
+    // Convertit vers le fuseau du site (UTC+2) pour l'affichage
+    const siteDate = new Date(d.getTime() + SITE_TIMEZONE_OFFSET)
+    return siteDate.toLocaleDateString('fr-FR', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',

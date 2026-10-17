@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Menu, Lock, X, ChevronRight, MapPin } from 'lucide-react'
 import { SearchAutocomplete } from '@/components/site/search-autocomplete'
+import { InstallAppButton } from '@/components/site/install-app-button'
 import {
   SOCIAL_LINKS,
   CONTACT_INFO,
@@ -214,6 +215,9 @@ export function SiteHeader() {
                 </span>
                 <span className="text-[10px] uppercase tracking-wide opacity-60">Espace privé</span>
               </button>
+
+              {/* Installer l'application (PWA) */}
+              <InstallAppButton onNavigate={() => setMobileOpen(false)} />
 
               {/* Section : Suivez-nous */}
               <div className="mt-6">
