@@ -90,6 +90,10 @@ export async function generateMetadata({
     return { title: 'Article introuvable' }
   }
   const url = `${BASE_URL}/articles/${article.slug}`
+  const ogImage = article.imageUrl
+    ? (article.imageUrl.startsWith('http') ? article.imageUrl : BASE_URL + article.imageUrl)
+    : BASE_URL + '/logo.jpg'
+
   return {
     title: article.title,
     description: article.excerpt,
@@ -102,15 +106,13 @@ export async function generateMetadata({
       description: article.excerpt,
       publishedTime: article.createdAt,
       authors: ['Moïse Kalala'],
-      images: article.imageUrl
-        ? [{ url: article.imageUrl, width: 1344, height: 768, alt: article.imageAlt || article.title }]
-        : undefined,
+      images: [{ url: ogImage, width: 1344, height: 768, alt: article.imageAlt || article.title }],
     },
     twitter: {
       card: 'summary_large_image',
       title: article.title,
       description: article.excerpt,
-      images: article.imageUrl ? [article.imageUrl] : undefined,
+      images: [ogImage],
     },
   }
 }
@@ -296,8 +298,8 @@ export default async function ArticlePage({
             headline: article.title,
             description: article.excerpt,
             image: article.imageUrl ? [article.imageUrl.startsWith('http') ? article.imageUrl : BASE_URL + article.imageUrl] : undefined,
-            datePublished: article.createdAt.toISOString(),
-            dateModified: article.updatedAt.toISOString(),
+            datePublished: typeof article.createdAt === 'string' ? article.createdAt : new Date(article.createdAt).toISOString(),
+            dateModified: typeof article.updatedAt === 'string' ? article.updatedAt : new Date(article.updatedAt).toISOString(),
             author: {
               '@type': 'Person',
               name: 'Moïse Kalala',
@@ -315,8 +317,8 @@ export default async function ArticlePage({
               '@type': 'WebPage',
               '@id': `${BASE_URL}/articles/${article.slug}`,
             },
-            articleSection: sportMeta.label,
-            about: scopeMeta.label,
+            articleSection: sport.label,
+            about: scope.label,
             inLanguage: 'fr-FR',
           }),
         }}
