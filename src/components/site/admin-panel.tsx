@@ -132,11 +132,14 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
 
-  // Restore token + draft on mount
+  // Restore token + draft + password on mount
   useEffect(() => {
     if (typeof window === 'undefined') return
     const t = localStorage.getItem(TOKEN_KEY)
     if (t) setToken(t)
+    // Restore password for fallback auth (si token expiré)
+    const p = localStorage.getItem('gztv-pwd')
+    if (p) setPassword(p)
     const d = localStorage.getItem(DRAFT_KEY)
     if (d) {
       try {
@@ -162,9 +165,13 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
     if (token && open) fetchMatches()
   }, [token, open])
 
-  const authHeaders = () => ({
-    'x-admin-token': token || '',
-  })
+  const authHeaders = () => {
+    const headers: Record<string, string> = {}
+    if (token) headers['x-admin-token'] = token
+    // Fallback : mot de passe direct (rétro-compatibilité si token expiré)
+    if (password) headers['x-admin-password'] = password
+    return headers
+  }
 
   // ---------- Manual matches CRUD ----------
 
@@ -286,8 +293,9 @@ export function AdminPanel({ open, onOpenChange }: AdminPanelProps) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Échec de connexion')
       localStorage.setItem(TOKEN_KEY, data.token)
+      localStorage.setItem('gztv-pwd', password)
       setToken(data.token)
-      setPassword('')
+      // On garde le password en mémoire pour le fallback si le token expire
       toast.success('Bienvenue, Moïse ! Accès rédaction accordé.')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Connexion impossible.')
